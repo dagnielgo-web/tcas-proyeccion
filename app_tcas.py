@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 # -----------------------
 # 🎯 TÍTULO
 # -----------------------
-st.markdown("<h1 style='text-align: center;'>Proyección TCA's</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center;'>Proyección TCAS para ATR 42</h1>", unsafe_allow_html=True)
 
 # -----------------------
 # 📁 INPUTS
@@ -82,11 +82,26 @@ if st.button("Enviar"):
             for c in canales:
                 df[c] = df[c].astype(str).str.strip().str.upper()
 
+            # -----------------------
+            # 🎯 DETECCIÓN DE EVENTOS
+            # -----------------------
             mask = ~df[canales].isin(estados_normales)
             filas_evento = df[mask.any(axis=1)]
 
             if not filas_evento.empty:
-                evento = filas_evento.iloc[0]
+
+                # 🚫 Fases a excluir
+                fases_excluidas = ["PARKING", "FINAL APPROACH"]
+
+                filas_validas = filas_evento[
+                    ~filas_evento["FLIGHT__PHASE"].astype(str).str.upper().isin(fases_excluidas)
+                ]
+
+                # ✅ Tomar evento válido
+                if not filas_validas.empty:
+                    evento = filas_validas.iloc[0]
+                else:
+                    evento = filas_evento.iloc[0]
 
                 eventos.append([
                     2000 + int(evento["GMT__YEAR"]),
@@ -120,7 +135,7 @@ if st.button("Enviar"):
     # -----------------------
     eventos_por_año = df_eventos.groupby("año").size()
     st.write("Eventos por año")
-    st.write(eventos_por_año)
+    st.dataframe(eventos_por_año.astype(float).round(2))
 
     # -----------------------
     # 📊 VUELOS Y TASAS
@@ -141,8 +156,11 @@ if st.button("Enviar"):
         if año in vuelos_por_año:
             tasas[año] = eventos_por_año[año] / vuelos_por_año[año]
 
+    df_tasas = pd.DataFrame(list(tasas.items()), columns=["Año","Tasa"])
+    df_tasas["Tasa"] = df_tasas["Tasa"].round(2)
+
     st.write("Tasas TCAS por año")
-    st.write(tasas)
+    st.dataframe(df_tasas)
 
     # -----------------------
     # 🗺️ MAPA ACTUAL
@@ -164,9 +182,9 @@ if st.button("Enviar"):
     for _, row in df_ultimo.iterrows():
         info = f"""
         <b>Año:</b> {row['año']}<br>
-        <b>Altitud:</b> {row['altitud']} ft<br>
-        <b>Lat:</b> {row['lat']}<br>
-        <b>Lon:</b> {row['lon']}
+        <b>Altitud:</b> {round(row['altitud'],2)} ft<br>
+        <b>Lat:</b> {round(row['lat'],5)}<br>
+        <b>Lon:</b> {round(row['lon'],5)}
         """
 
         folium.CircleMarker(
@@ -193,7 +211,6 @@ if st.button("Enviar"):
     # 📈 PROYECCIÓN
     # -----------------------
     tasa_media = np.mean(list(tasas.values()))
-
     crecimiento_operacional = crecimiento_operacional / 100
 
     ultimo_año_vuelos = max(vuelos_por_año)
@@ -210,7 +227,7 @@ if st.button("Enviar"):
     df_proyeccion = pd.DataFrame(
         proyeccion,
         columns=["año","vuelos_proyectados","eventos_tcas_estimados"]
-    )
+    ).round(2)
 
     st.subheader("Proyección")
     st.dataframe(df_proyeccion)
@@ -266,9 +283,8 @@ if st.button("Enviar"):
     st.components.v1.html(mapa_futuro._repr_html_(), height=600)
 
     # -----------------------
-    # 📊 GRÁFICAS (AGREGADAS)
+    # 📊 GRÁFICAS
     # -----------------------
-
     def clasificar_altitud(alt):
         if alt < 10000:
             return "LOW (<10000 ft)"
@@ -283,14 +299,14 @@ if st.button("Enviar"):
 
     riesgo_altitud = df_eventos["nivel_altitud"].value_counts()
 
-    st.subheader("Riesgo TCAS por Altitud")
+    st.subheader("Riesgo TCAS por Altitud General")
     fig1, ax1 = plt.subplots()
     riesgo_altitud.plot(kind="bar", ax=ax1, title="Riesgo TCAS por Altitud")
     st.pyplot(fig1)
 
     riesgo_fase = df_eventos["fase"].value_counts()
 
-    st.subheader("Eventos TCAS por Fase de Vuelo")
+    st.subheader("Eventos TCAS por Fase de Vuelo General")
     fig2, ax2 = plt.subplots()
     riesgo_fase.plot(kind="bar", ax=ax2, title="Eventos TCAS por fase de vuelo")
     st.pyplot(fig2)
@@ -301,4 +317,3 @@ if st.button("Enviar"):
 st.markdown(
     "<p style='text-align: right; font-size: 12px;'>Diseñado por Daniel Gonzalez</p>",
     unsafe_allow_html=True
-)
