@@ -317,3 +317,4 @@ if st.button("Enviar"):
 st.markdown(
     "<p style='text-align: right; font-size: 12px;'>Diseñado por Daniel Gonzalez</p>",
     unsafe_allow_html=True
+)
