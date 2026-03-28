@@ -178,4 +178,3 @@ if archivo_zip:
         ).add_to(mapa2)
 
     st_folium(mapa2, width=800)
-    )
