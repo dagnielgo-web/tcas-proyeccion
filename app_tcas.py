@@ -239,18 +239,27 @@ if st.button("Enviar"):
 # -----------------------
 # 📈 TASA PROYECTADA LINEAL
 # -----------------------
-    años_hist = sorted(df_tasas["Año"].values)
-    tasas_hist = df_tasas["Tasa"].values
+    años_hist = np.array(df_tasas["Año"].values)
+    tasas_hist = np.array(df_tasas["Tasa"].values)
 
+# -----------------------
+# 📈 REGRESIÓN LINEAL
+# -----------------------
     if len(años_hist) >= 2:
-        pendiente = (tasas_hist[-1] - tasas_hist[0]) / (años_hist[-1] - años_hist[0])
+        pendiente, intercepto = np.polyfit(años_hist, tasas_hist, 1)
     else:
         pendiente = 0
+        intercepto = tasas_hist[0] if len(tasas_hist) > 0 else 0
 
     tasas_proyectadas = []
 
     for año in df_proyeccion["año"]:
-        tasa = tasas_hist[-1] + pendiente * (año - años_hist[-1])
+        tasa = pendiente * año + intercepto
+
+    # 🔒 OPCIONAL: evitar tasas negativas
+        if tasa < 0:
+            tasa = 0
+
         tasas_proyectadas.append(tasa)
 
     df_proyeccion["tasa_tcas_por_1000_vuelos"] = np.round(tasas_proyectadas, 4)
