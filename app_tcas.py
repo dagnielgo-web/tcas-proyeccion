@@ -9,7 +9,7 @@ from sklearn.neighbors import KernelDensity
 import tempfile
 import matplotlib.pyplot as plt
 
-st.markdown("<h1 style='text-align: center;'>Proyección TCAS (Traffic Collision Avoidance System)</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center;'>Proyección TCA's</h1>", unsafe_allow_html=True)
 
 zip_file = st.file_uploader("Sube la carpeta comprimida (.zip)", type=["zip"])
 
@@ -60,7 +60,7 @@ if st.button("Enviar"):
             df = pd.read_csv(archivo)
 
             columnas = ["TRAJ__LAT_GPS","TRAJ__LON_GPS","ALT__BARO","FLIGHT__PHASE",
-                        "GMT__YEAR","GMT__MONTH","GMT__DAY","GMT__HOUR","Time"] + canales
+                        "GMT__YEAR","GMT__HOUR"] + canales
 
             if not all(col in df.columns for col in columnas):
                 continue
@@ -84,23 +84,20 @@ if st.button("Enviar"):
                 else:
                     evento = filas_evento.iloc[0]
 
-                # 🕒 CONSTRUIR FECHA
-                fecha = pd.to_datetime(
-                    f"{2000 + int(evento['GMT__YEAR'])}-"
-                    f"{int(evento['GMT__MONTH'])}-"
-                    f"{int(evento['GMT__DAY'])} "
-                    f"{int(evento['GMT__HOUR'])}:00:00",
-                    errors='coerce'
-                )
+                # ✅ AÑO CORRECTO
+                year_raw = int(evento["GMT__YEAR"])
+                if year_raw < 100:
+                    año = 2000 + year_raw
+                else:
+                    año = year_raw
 
-                fecha = fecha + pd.to_timedelta(evento["Time"], unit='s')
-
-                # UTC → Colombia
-                fecha_col = fecha - pd.Timedelta(hours=5)
+                # ✅ HORA INDEPENDIENTE (UTC → Colombia)
+                hora_utc = int(evento["GMT__HOUR"])
+                hora_col = (hora_utc - 5) % 24
 
                 eventos.append([
-                    fecha_col.year,
-                    fecha_col.hour,
+                    año,
+                    hora_col,
                     evento["TRAJ__LAT_GPS"],
                     evento["TRAJ__LON_GPS"],
                     evento["ALT__BARO"],
@@ -172,7 +169,7 @@ if st.button("Enviar"):
     st.subheader("Mapa actual")
     st.components.v1.html(mapa._repr_html_(), height=600)
 
-    # 📊 NUEVA GRÁFICA
+    # 📊 GRÁFICA POR HORA
     st.subheader("Eventos por hora (Colombia)")
     eventos_hora = df_eventos.groupby("hora").size()
 
