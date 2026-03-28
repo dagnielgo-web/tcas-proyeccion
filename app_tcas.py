@@ -233,7 +233,114 @@ if st.button("Enviar"):
 
     st.subheader("Mapa actual")
     st.components.v1.html(mapa._repr_html_(), height=600)
+ # -----------------------
+    # 📈 PROYECCIÓN
+    # -----------------------
+    tasa_media = np.mean(list(tasas.values()))
+    crecimiento_operacional = crecimiento_operacional / 100
 
-    # =========================
-    # (NO SE MODIFICA NADA MÁS)
-    # =========================
+    ultimo_año_vuelos = max(vuelos_por_año)
+    vuelos_actuales = vuelos_por_año[ultimo_año_vuelos]
+
+    proyeccion = []
+
+    for i in range(1, int(años_proyeccion)+1):
+        año = ultimo_año_vuelos + i
+        vuelos = vuelos_actuales * (1+crecimiento_operacional)**i
+        eventos_estimados = tasa_media * vuelos
+        proyeccion.append([año,vuelos,eventos_estimados])
+
+    df_proyeccion = pd.DataFrame(
+        proyeccion,
+        columns=["año","vuelos_proyectados","eventos_tcas_estimados"]
+    ).round(2)
+
+    st.subheader("Proyección")
+    st.dataframe(df_proyeccion)
+
+    # -----------------------
+    # 🗺️ MAPA FUTURO
+    # -----------------------
+    kde = KernelDensity(bandwidth=0.03)
+    kde.fit(df_eventos[["lat","lon"]].values)
+
+    eventos_futuros = int(df_proyeccion.iloc[-1]["eventos_tcas_estimados"])
+
+    simulados = kde.sample(eventos_futuros)
+    df_simulados = pd.DataFrame(simulados, columns=["lat","lon"])
+
+    mapa_futuro = folium.Map(location=[4.5,-74], zoom_start=6)
+
+    df_simulados["peso"] = 1
+
+    HeatMap(
+        df_simulados[["lat","lon","peso"]].values,
+        radius=17,
+        blur=20,
+        max_zoom=15
+    ).add_to(mapa_futuro)
+
+    df_simulados["lat_bin"] = df_simulados["lat"].round(1)
+    df_simulados["lon_bin"] = df_simulados["lon"].round(1)
+
+    zonas = df_simulados.groupby(["lat_bin","lon_bin"]).size().reset_index(name="eventos")
+
+    for _, row in zonas.iterrows():
+        folium.CircleMarker(
+            location=[row["lat_bin"], row["lon_bin"]],
+            radius=5 + row["eventos"] * 0.15,
+            popup=f"Eventos estimados: {int(row['eventos'])}",
+            color="blue",
+            fill=True,
+            fill_opacity=0.6
+        ).add_to(mapa_futuro)
+
+    año_proyectado = int(df_proyeccion.iloc[-1]["año"])
+
+    titulo = f"""
+    <h3 align="center">
+    Proyección TCAS {año_proyectado}<br>
+    Eventos estimados: {eventos_futuros}
+    </h3>
+    """
+    mapa_futuro.get_root().html.add_child(folium.Element(titulo))
+
+    st.subheader("Mapa proyectado")
+    st.components.v1.html(mapa_futuro._repr_html_(), height=600)
+
+    # -----------------------
+    # 📊 GRÁFICAS
+    # -----------------------
+    def clasificar_altitud(alt):
+        if alt < 10000:
+            return "LOW (<10000 ft)"
+        elif alt < 20000:
+            return "MEDIUM (10000-20000 ft)"
+        elif alt < 30000:
+            return "HIGH (20000-30000 ft)"
+        else:
+            return "CRUISE (>30000 ft)"
+
+    df_eventos["nivel_altitud"] = df_eventos["altitud"].apply(clasificar_altitud)
+
+    riesgo_altitud = df_eventos["nivel_altitud"].value_counts()
+
+    st.subheader("Riesgo TCAS por Altitud General")
+    fig1, ax1 = plt.subplots()
+    riesgo_altitud.plot(kind="bar", ax=ax1, title="Riesgo TCAS por Altitud")
+    st.pyplot(fig1)
+
+    riesgo_fase = df_eventos["fase"].value_counts()
+
+    st.subheader("Eventos TCAS por Fase de Vuelo General")
+    fig2, ax2 = plt.subplots()
+    riesgo_fase.plot(kind="bar", ax=ax2, title="Eventos TCAS por fase de vuelo")
+    st.pyplot(fig2)
+
+# -----------------------
+# ✍️ FIRMA
+# -----------------------
+st.markdown(
+    "<p style='text-align: right; font-size: 12px;'>Diseñado por Daniel Gonzalez</p>",
+    unsafe_allow_html=True
+)
