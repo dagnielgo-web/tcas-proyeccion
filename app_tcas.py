@@ -29,43 +29,57 @@ if archivo_zip:
             if archivo.endswith(".json"):
                 total_vuelos += 1
 
-                with z.open(archivo) as f:
-                    data = json.load(f)
+                try:
+                    with z.open(archivo) as f:
+                        data = json.load(f)
 
-                    try:
                         df = pd.DataFrame(data)
 
-                        if "RA" in df.columns:
+                        # 🔍 VALIDAR COLUMNAS CLAVE
+                        columnas_requeridas = [
+                            "RA", "GMT__YEAR", "GMT__HOUR",
+                            "TRAJ__LAT_GPS", "TRAJ__LON_GPS",
+                            "ALT__BARO", "FLIGHT__PHASE"
+                        ]
 
-                            # 🔥 FILTRAR FASES NO DESEADAS
-                            df_validos = df[
-                                (df["RA"] == 1) &
-                                (~df["FLIGHT__PHASE"].isin(["PARKING", "FINAL APPROACH"]))
-                            ]
+                        if not all(col in df.columns for col in columnas_requeridas):
+                            continue
 
-                            if not df_validos.empty:
-                                evento = df_validos.iloc[0]
+                        # -----------------------------
+                        # FILTRO DE EVENTOS
+                        # -----------------------------
+                        df_validos = df[
+                            (df["RA"] == 1) &
+                            (~df["FLIGHT__PHASE"].isin(["PARKING", "FINAL APPROACH"]))
+                        ]
 
-                                año = int(evento["GMT__YEAR"])
+                        if not df_validos.empty:
 
-                                # ✅ HORA COLOMBIA
-                                hora_utc = int(evento["GMT__HOUR"])
-                                hora_col = (hora_utc - 5) % 24
+                            evento = df_validos.iloc[0]
 
-                                eventos.append([
-                                    año,
-                                    hora_col,
-                                    evento["TRAJ__LAT_GPS"],
-                                    evento["TRAJ__LON_GPS"],
-                                    evento["ALT__BARO"],
-                                    evento["FLIGHT__PHASE"]
-                                ])
+                            año = int(evento["GMT__YEAR"])
 
-                    except:
-                        continue
+                            # 🕒 HORA COLOMBIA (UTC-5)
+                            hora_utc = int(evento["GMT__HOUR"])
+                            hora_col = (hora_utc - 5) % 24
 
+                            eventos.append([
+                                año,
+                                hora_col,
+                                float(evento["TRAJ__LAT_GPS"]),
+                                float(evento["TRAJ__LON_GPS"]),
+                                float(evento["ALT__BARO"]),
+                                str(evento["FLIGHT__PHASE"])
+                            ])
+
+                except:
+                    continue
+
+    # -----------------------------
+    # VALIDACIÓN FINAL
+    # -----------------------------
     if len(eventos) == 0:
-        st.warning("No hay datos en ese rango")
+        st.warning("No hay datos válidos en el archivo")
         st.stop()
 
     # -----------------------------
@@ -83,13 +97,15 @@ if archivo_zip:
     tabla["vuelos"] = total_vuelos
     tabla["Tasa_real_x1000"] = (tabla["eventos"] / tabla["vuelos"]) * 1000
 
-    # 🔥 INPUT PROYECCIÓN
+    # -----------------------------
+    # PROYECCIÓN
+    # -----------------------------
     años_proyectar = st.number_input("Años a proyectar", 1, 10, 3)
 
     ultimo_año = tabla["año"].max()
     tasa_base = tabla["Tasa_real_x1000"].iloc[-1]
 
-    factor_crecimiento = 1.05  # puedes ajustar
+    factor_crecimiento = 1.05
 
     proyecciones = []
 
@@ -97,7 +113,12 @@ if archivo_zip:
         año_futuro = ultimo_año + i
         tasa_proy = tasa_base * (factor_crecimiento ** i)
 
-        proyecciones.append([año_futuro, np.nan, np.nan, tasa_proy])
+        proyecciones.append([
+            año_futuro,
+            np.nan,
+            np.nan,
+            tasa_proy
+        ])
 
     df_proy = pd.DataFrame(
         proyecciones,
@@ -127,19 +148,23 @@ if archivo_zip:
     # -----------------------------
     # GRÁFICA POR HORA
     # -----------------------------
-    st.subheader("🕒 Distribución de eventos por hora")
+    st.subheader("🕒 Distribución de eventos por hora (Colombia)")
 
     fig2, ax2 = plt.subplots()
     df_eventos["hora"].hist(ax=ax2, bins=24)
-    ax2.set_title("Eventos por hora (Colombia)")
+    ax2.set_xlabel("Hora")
+    ax2.set_ylabel("Eventos")
     st.pyplot(fig2)
 
     # -----------------------------
     # HEATMAP REAL
     # -----------------------------
-    st.subheader("🔥 Heatmap de eventos reales")
+    st.subheader(f"🔥 Heatmap de eventos reales | Eventos: {len(df_eventos)}")
 
-    mapa = folium.Map(location=[df_eventos["lat"].mean(), df_eventos["lon"].mean()], zoom_start=5)
+    mapa = folium.Map(
+        location=[df_eventos["lat"].mean(), df_eventos["lon"].mean()],
+        zoom_start=5
+    )
 
     for _, row in df_eventos.iterrows():
         folium.CircleMarker(
@@ -151,30 +176,40 @@ if archivo_zip:
             <b>Fase:</b> {row['fase']}<br>
             <b>Altitud:</b> {row['altitud']}
             """,
-            color="red"
+            color="red",
+            fill=True
         ).add_to(mapa)
 
-    st_folium(mapa, width=800)
+    st_folium(mapa, width=900)
 
     # -----------------------------
-    # HEATMAP PROYECTADO (CON KDE)
+    # HEATMAP PROYECTADO (KDE)
     # -----------------------------
-    st.subheader("🔥 Heatmap proyectado")
+    st.subheader("🔥 Heatmap proyectado con hotspots")
 
     coords = np.vstack([df_eventos["lat"], df_eventos["lon"]])
-    kde = gaussian_kde(coords)
 
-    n_puntos = len(df_eventos) * años_proyectar
+    try:
+        kde = gaussian_kde(coords)
 
-    nuevas_coords = kde.resample(n_puntos)
+        n_puntos = len(df_eventos) * años_proyectar
 
-    mapa2 = folium.Map(location=[df_eventos["lat"].mean(), df_eventos["lon"].mean()], zoom_start=5)
+        nuevas_coords = kde.resample(n_puntos)
 
-    for i in range(n_puntos):
-        folium.CircleMarker(
-            location=[nuevas_coords[0][i], nuevas_coords[1][i]],
-            radius=3,
-            color="blue"
-        ).add_to(mapa2)
+        mapa2 = folium.Map(
+            location=[df_eventos["lat"].mean(), df_eventos["lon"].mean()],
+            zoom_start=5
+        )
 
-    st_folium(mapa2, width=800)
+        for i in range(n_puntos):
+            folium.CircleMarker(
+                location=[nuevas_coords[0][i], nuevas_coords[1][i]],
+                radius=3,
+                color="blue",
+                fill=True
+            ).add_to(mapa2)
+
+        st_folium(mapa2, width=900)
+
+    except:
+        st.warning("No se pudo generar el heatmap proyectado (datos insuficientes)")
