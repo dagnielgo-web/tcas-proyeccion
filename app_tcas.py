@@ -74,7 +74,7 @@ if st.button("Enviar"):
         try:
             df = pd.read_csv(archivo)
 
-            columnas = ["TRAJ__LAT_GPS","TRAJ__LON_GPS","ALT__BARO","FLIGHT__PHASE","GMT__YEAR"] + canales
+            columnas = ["TRAJ__LAT_GPS","TRAJ__LON_GPS","ALT__BARO","FLIGHT__PHASE","GMT__YEAR","GMT__HOUR"] + canales
 
             if not all(col in df.columns for col in columnas):
                 continue
@@ -108,12 +108,13 @@ if st.button("Enviar"):
                     evento["TRAJ__LAT_GPS"],
                     evento["TRAJ__LON_GPS"],
                     evento["ALT__BARO"],
-                    evento["FLIGHT__PHASE"]
+                    evento["FLIGHT__PHASE"],
+                    int(evento["GMT__HOUR"])
                 ])
         except:
             pass
 
-    df_eventos = pd.DataFrame(eventos, columns=["año","lat","lon","altitud","fase"])
+    df_eventos = pd.DataFrame(eventos, columns=["año","lat","lon","altitud","fase","hora"])
 
     # -----------------------
     # 📉 FILTRO
@@ -182,6 +183,7 @@ if st.button("Enviar"):
     for _, row in df_ultimo.iterrows():
         info = f"""
         <b>Año:</b> {row['año']}<br>
+        <b>Hora (UTC):</b> {row['hora']}:00<br>
         <b>Altitud:</b> {round(row['altitud'],2)} ft<br>
         <b>Lat:</b> {round(row['lat'],5)}<br>
         <b>Lon:</b> {round(row['lon'],5)}
@@ -310,6 +312,29 @@ if st.button("Enviar"):
     fig2, ax2 = plt.subplots()
     riesgo_fase.plot(kind="bar", ax=ax2, title="Eventos TCAS por fase de vuelo")
     st.pyplot(fig2)
+        # -----------------------
+    # 🕒 EVENTOS POR HORA
+    # -----------------------
+    def clasificar_hora(h):
+        if 0 <= h < 6:
+            return "MADRUGADA (00-06)"
+        elif 6 <= h < 12:
+            return "MAÑANA (06-12)"
+        elif 12 <= h < 18:
+            return "TARDE (12-18)"
+        else:
+            return "NOCHE (18-24)"
+
+    df_eventos["rango_hora"] = df_eventos["hora"].apply(clasificar_hora)
+
+    eventos_por_hora = df_eventos["rango_hora"].value_counts().sort_index()
+
+    st.subheader("Eventos TCAS por Rango Horario")
+    fig3, ax3 = plt.subplots()
+    eventos_por_hora.plot(kind="bar", ax=ax3, title="Distribución de eventos por hora del día")
+    st.pyplot(fig3)
+
+
 
 # -----------------------
 # ✍️ FIRMA
