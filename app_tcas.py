@@ -1,211 +1,213 @@
 import streamlit as st
-import pandas as pd
 import zipfile
 import os
-import folium
-from streamlit_folium import st_folium
+import pandas as pd
 import numpy as np
+import folium
+from folium.plugins import HeatMap
+from sklearn.neighbors import KernelDensity
+import tempfile
 import matplotlib.pyplot as plt
-from sklearn.cluster import KMeans
-import io
-
-st.set_page_config(layout="wide")
 
 st.markdown("<h1 style='text-align: center;'>Proyección TCA's</h1>", unsafe_allow_html=True)
 
-archivo_zip = st.file_uploader("Sube el archivo ZIP", type="zip")
-anios_proyectar = st.number_input("Años a proyectar", min_value=1, max_value=10, value=3)
+zip_file = st.file_uploader("Sube la carpeta comprimida (.zip)", type=["zip"])
+
+col1, col2 = st.columns(2)
+
+with col1:
+    año_inicio = st.number_input("Año inicial", value=2019)
+    crecimiento_operacional = st.number_input("Crecimiento operacional (%)", value=5.0)
+
+with col2:
+    año_fin = st.number_input("Año final", value=2024)
+    años_proyeccion = st.number_input("Años a proyectar", value=3)
 
 if st.button("Enviar"):
 
-    if archivo_zip is not None:
+    if zip_file is None:
+        st.error("Debes subir un archivo ZIP")
+        st.stop()
 
-        df_total = []
+    temp_dir = tempfile.mkdtemp()
 
-        with zipfile.ZipFile(archivo_zip, 'r') as zip_ref:
-            for file in zip_ref.namelist():
+    with zipfile.ZipFile(zip_file, 'r') as zip_ref:
+        zip_ref.extractall(temp_dir)
 
-                if file.endswith(".zip"):
-                    inner_zip = zipfile.ZipFile(io.BytesIO(zip_ref.read(file)))
+    for root, dirs, files in os.walk(temp_dir):
+        for file in files:
+            if file.endswith(".zip"):
+                try:
+                    with zipfile.ZipFile(os.path.join(root,file),'r') as z:
+                        z.extractall(root)
+                except:
+                    pass
 
-                    for csv_file in inner_zip.namelist():
-                        df = pd.read_csv(inner_zip.open(csv_file))
+    csv_files = []
 
-                        # =========================
-                        # DETECCIÓN DE EVENTO TCAS
-                        # =========================
-                        tcas_cols = [col for col in df.columns if "TCAS__RA" in col]
-                        df["evento"] = df[tcas_cols].sum(axis=1)
+    for root, dirs, files in os.walk(temp_dir):
+        for file in files:
+            if file.endswith(".csv"):
+                csv_files.append(os.path.join(root,file))
 
-                        df = df[df["evento"] > 0]
+    eventos = []
 
-                        if df.empty:
-                            continue
+    canales = ["TCAS__RA_1","TCAS__RA_2","TCAS__RA_3","TCAS__RA_4"]
+    estados_normales = ["NO ADVISORY","NRD"]
 
-                        # =========================
-                        # FILTRO DE FASES
-                        # =========================
-                        fases_invalidas = ["PARKING", "FINAL APPROACH"]
-                        df = df[~df["FLIGHT__PHASE"].isin(fases_invalidas)]
+    for archivo in csv_files:
+        try:
+            df = pd.read_csv(archivo)
 
-                        if df.empty:
-                            continue
+            columnas = ["TRAJ__LAT_GPS","TRAJ__LON_GPS","ALT__BARO","FLIGHT__PHASE",
+                        "GMT__YEAR","GMT__MONTH","GMT__DAY","GMT__HOUR","Time"] + canales
 
-                        # =========================
-                        # CREACIÓN DE FECHA
-                        # =========================
-                        df["datetime"] = pd.to_datetime(
-                            df["GMT__YEAR"].astype(str) + "-" +
-                            df["GMT__MONTH"].astype(str) + "-" +
-                            df["GMT__DAY"].astype(str) + " " +
-                            df["GMT__HOUR"].astype(str) + ":00:00",
-                            errors='coerce'
-                        )
+            if not all(col in df.columns for col in columnas):
+                continue
 
-                        # Ajuste con segundos
-                        df["datetime"] = df["datetime"] + pd.to_timedelta(df["Time"], unit='s')
+            for c in canales:
+                df[c] = df[c].astype(str).str.strip().str.upper()
 
-                        # UTC → Colombia
-                        df["datetime_col"] = df["datetime"] - pd.Timedelta(hours=5)
+            mask = ~df[canales].isin(estados_normales)
+            filas_evento = df[mask.any(axis=1)]
 
-                        df_total.append(df.iloc[0])  # primer evento válido del vuelo
+            if not filas_evento.empty:
 
-        df_final = pd.DataFrame(df_total)
+                fases_excluidas = ["PARKING", "FINAL APPROACH"]
 
-        # =========================
-        # VARIABLES TEMPORALES
-        # =========================
-        df_final["year"] = df_final["datetime_col"].dt.year
-        df_final["hora"] = df_final["datetime_col"].dt.hour
+                filas_validas = filas_evento[
+                    ~filas_evento["FLIGHT__PHASE"].astype(str).str.upper().isin(fases_excluidas)
+                ]
 
-        # =========================
-        # EVENTOS POR AÑO
-        # =========================
-        eventos_anuales = df_final.groupby("year").size()
+                if not filas_validas.empty:
+                    evento = filas_validas.iloc[0]
+                else:
+                    evento = filas_evento.iloc[0]
 
-        vuelos = {2024: 19347, 2025: 20000}
+                # 🕒 CONSTRUIR FECHA
+                fecha = pd.to_datetime(
+                    f"{2000 + int(evento['GMT__YEAR'])}-"
+                    f"{int(evento['GMT__MONTH'])}-"
+                    f"{int(evento['GMT__DAY'])} "
+                    f"{int(evento['GMT__HOUR'])}:00:00",
+                    errors='coerce'
+                )
 
-        tasas = {}
-        for año in eventos_anuales.index:
-            if año in vuelos:
-                tasas[año] = (eventos_anuales[año] / vuelos[año]) * 1000
+                fecha = fecha + pd.to_timedelta(evento["Time"], unit='s')
 
-        df_tasas = pd.DataFrame({
-            "Año": list(tasas.keys()),
-            "Tasa": list(tasas.values())
-        })
+                # UTC → Colombia
+                fecha_col = fecha - pd.Timedelta(hours=5)
 
-        # =========================
-        # PROYECCIÓN
-        # =========================
-        x = np.array(df_tasas["Año"])
-        y = np.array(df_tasas["Tasa"])
+                eventos.append([
+                    fecha_col.year,
+                    fecha_col.hour,
+                    evento["TRAJ__LAT_GPS"],
+                    evento["TRAJ__LON_GPS"],
+                    evento["ALT__BARO"],
+                    evento["FLIGHT__PHASE"]
+                ])
+        except:
+            pass
 
-        coef = np.polyfit(x, y, 1)
+    df_eventos = pd.DataFrame(eventos, columns=["año","hora","lat","lon","altitud","fase"])
 
-        futuros = []
-        ultimo = max(x)
+    df_eventos = df_eventos[
+        (df_eventos["año"] >= año_inicio) &
+        (df_eventos["año"] <= año_fin)
+    ].copy()
 
-        for i in range(1, anios_proyectar + 1):
-            año = ultimo + i
-            tasa = coef[0]*año + coef[1]
-            futuros.append((año, tasa))
+    if df_eventos.empty:
+        st.error("No hay datos en ese rango")
+        st.stop()
 
-        df_futuros = pd.DataFrame(futuros, columns=["Año", "Tasa"])
-        df_tasas_total = pd.concat([df_tasas, df_futuros])
+    st.subheader("Eventos detectados")
+    st.write(len(df_eventos))
 
-        # =========================
-        # MAPA REAL
-        # =========================
-        st.subheader("Mapa de eventos reales")
+    eventos_por_año = df_eventos.groupby("año").size()
+    st.write("Eventos por año")
+    st.dataframe(eventos_por_año.astype(float).round(2))
 
-        mapa = folium.Map(
-            location=[df_final["TRAJ__LAT_GPS"].mean(), df_final["TRAJ__LON_GPS"].mean()],
-            zoom_start=6
-        )
+    vuelos_por_año = {
+        2019:17235, 2020:7331, 2021:15737,
+        2022:16477, 2023:17630, 2024:19347, 2025:20256
+    }
 
-        for _, row in df_final.iterrows():
-            folium.CircleMarker(
-                location=[row["TRAJ__LAT_GPS"], row["TRAJ__LON_GPS"]],
-                radius=5,
-                popup=f"""
-                Año: {row['year']}<br>
-                Fase: {row['FLIGHT__PHASE']}<br>
-                Hora Colombia: {row['hora']}:00
-                """,
-                color="blue",
-                fill=True
-            ).add_to(mapa)
+    tasas = {}
 
-        st_folium(mapa, width=800)
+    for año in eventos_por_año.index:
+        if año in vuelos_por_año:
+            tasas[año] = (eventos_por_año[año] / vuelos_por_año[año]) * 1000
 
-        # =========================
-        # CLUSTERS
-        # =========================
-        st.subheader("Mapa proyectado (clusters)")
+    df_tasas = pd.DataFrame(list(tasas.items()), columns=["Año","Tasa"])
 
-        coords = df_final[["TRAJ__LAT_GPS", "TRAJ__LON_GPS"]].dropna()
+    st.write("Tasas TCAS por año (por cada 1000 vuelos)")
+    st.dataframe(df_tasas)
 
-        kmeans = KMeans(n_clusters=5, random_state=0).fit(coords)
+    # 🗺️ MAPA
+    ultimo_año = df_eventos["año"].max()
+    df_ultimo = df_eventos[df_eventos["año"] == ultimo_año]
 
-        mapa2 = folium.Map(
-            location=[coords["TRAJ__LAT_GPS"].mean(), coords["TRAJ__LON_GPS"].mean()],
-            zoom_start=6
-        )
+    mapa = folium.Map(location=[4.5, -74], zoom_start=6)
 
-        for i in range(len(coords)):
-            folium.CircleMarker(
-                location=[coords.iloc[i,0], coords.iloc[i,1]],
-                radius=5,
-                color="red",
-                fill=True
-            ).add_to(mapa2)
+    HeatMap(df_ultimo[["lat","lon"]].values).add_to(mapa)
 
-        st_folium(mapa2, width=800)
+    for _, row in df_ultimo.iterrows():
+        info = f"""
+        <b>Año:</b> {row['año']}<br>
+        <b>Fase:</b> {row['fase']}<br>
+        <b>Altitud:</b> {round(row['altitud'],2)} ft<br>
+        <b>Hora Colombia:</b> {row['hora']}:00<br>
+        <b>Lat:</b> {round(row['lat'],5)}<br>
+        <b>Lon:</b> {round(row['lon'],5)}
+        """
 
-        # =========================
-        # EVENTOS POR HORA
-        # =========================
-        st.subheader("Eventos por hora")
+        folium.CircleMarker(
+            location=[row["lat"], row["lon"]],
+            radius=3,
+            color="red",
+            fill=True,
+            popup=folium.Popup(info, max_width=300)
+        ).add_to(mapa)
 
-        eventos_hora = df_final.groupby("hora").size()
+    st.subheader("Mapa actual")
+    st.components.v1.html(mapa._repr_html_(), height=600)
 
-        fig, ax = plt.subplots()
-        eventos_hora.plot(kind="bar", ax=ax)
-        st.pyplot(fig)
+    # 📊 NUEVA GRÁFICA
+    st.subheader("Eventos por hora (Colombia)")
+    eventos_hora = df_eventos.groupby("hora").size()
 
-        # =========================
-        # ALTITUD
-        # =========================
-        st.subheader("Riesgo por altitud")
+    fig_hora, ax_hora = plt.subplots()
+    eventos_hora.plot(kind="bar", ax=ax_hora)
+    st.pyplot(fig_hora)
 
-        alt = df_final.groupby("ALT__BARO").size()
+    # 📊 ALTITUD
+    def clasificar_altitud(alt):
+        if alt < 10000:
+            return "LOW"
+        elif alt < 20000:
+            return "MEDIUM"
+        elif alt < 30000:
+            return "HIGH"
+        else:
+            return "CRUISE"
 
-        fig2, ax2 = plt.subplots()
-        alt.plot(kind="bar", ax=ax2)
-        st.pyplot(fig2)
+    df_eventos["nivel_altitud"] = df_eventos["altitud"].apply(clasificar_altitud)
 
-        # =========================
-        # FASE
-        # =========================
-        st.subheader("Eventos por fase")
+    riesgo_altitud = df_eventos["nivel_altitud"].value_counts()
 
-        fase = df_final.groupby("FLIGHT__PHASE").size()
+    st.subheader("Riesgo por altitud")
+    fig1, ax1 = plt.subplots()
+    riesgo_altitud.plot(kind="bar", ax=ax1)
+    st.pyplot(fig1)
 
-        fig3, ax3 = plt.subplots()
-        fase.plot(kind="bar", ax=ax3)
-        st.pyplot(fig3)
+    riesgo_fase = df_eventos["fase"].value_counts()
 
-        # =========================
-        # TABLAS
-        # =========================
-        st.subheader("Eventos por año")
-        st.dataframe(eventos_anuales.reset_index().round(2))
+    st.subheader("Eventos por fase")
+    fig2, ax2 = plt.subplots()
+    riesgo_fase.plot(kind="bar", ax=ax2)
+    st.pyplot(fig2)
 
-        st.subheader("Tasas por cada 1000 vuelos")
-        st.dataframe(df_tasas_total)
-
-        st.markdown(
-            "<p style='text-align: right; font-size: 10px;'>Diseñado por Daniel Gonzalez</p>",
-            unsafe_allow_html=True
-        )
+st.markdown(
+    "<p style='text-align: right; font-size: 12px;'>Diseñado por Daniel Gonzalez</p>",
+    unsafe_allow_html=True
+)
