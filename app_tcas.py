@@ -232,31 +232,31 @@ if st.button("Enviar"):
         proyeccion.append([año,vuelos,eventos_estimados])
 
     df_proyeccion = pd.DataFrame(
-    proyeccion,
-    columns=["año","vuelos_proyectados","eventos_tcas_estimados"]
-)
+        proyeccion,
+        columns=["año","vuelos_proyectados","eventos_tcas_estimados"]
+    )
 
 # -----------------------
 # 📈 TASA PROYECTADA LINEAL
 # -----------------------
-años_hist = sorted(df_tasas["Año"].values)
-tasas_hist = df_tasas["Tasa"].values
+    años_hist = sorted(df_tasas["Año"].values)
+    tasas_hist = df_tasas["Tasa"].values
 
-if len(años_hist) >= 2:
-    pendiente = (tasas_hist[-1] - tasas_hist[0]) / (años_hist[-1] - años_hist[0])
-else:
-    pendiente = 0
+    if len(años_hist) >= 2:
+        pendiente = (tasas_hist[-1] - tasas_hist[0]) / (años_hist[-1] - años_hist[0])
+    else:
+        pendiente = 0
 
-tasas_proyectadas = []
+    tasas_proyectadas = []
 
-for año in df_proyeccion["año"]:
-    tasa = tasas_hist[-1] + pendiente * (año - años_hist[-1])
-    tasas_proyectadas.append(tasa)
+    for año in df_proyeccion["año"]:
+        tasa = tasas_hist[-1] + pendiente * (año - años_hist[-1])
+        tasas_proyectadas.append(tasa)
 
-df_proyeccion["tasa_tcas_por_1000_vuelos"] = np.round(tasas_proyectadas, 4)
+    df_proyeccion["tasa_tcas_por_1000_vuelos"] = np.round(tasas_proyectadas, 4)
 
 # Redondeo general (menos preciso que tasas)
-df_proyeccion = df_proyeccion.round(2)
+    df_proyeccion = df_proyeccion.round(2)
 
     st.subheader("Proyección")
     st.dataframe(df_proyeccion)
