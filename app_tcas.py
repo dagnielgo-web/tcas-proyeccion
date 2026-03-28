@@ -158,7 +158,12 @@ if st.button("Enviar"):
             tasas[año] = eventos_por_año[año] / vuelos_por_año[año]
 
     df_tasas = pd.DataFrame(list(tasas.items()), columns=["Año","Tasa"])
-    df_tasas["Tasa"] = df_tasas["Tasa"].round(2)
+
+# Convertir a tasa por cada 1000 vuelos
+    df_tasas["Tasa"] = df_tasas["Tasa"] * 1000
+
+# Más decimales solo en esta tabla
+    df_tasas["Tasa"] = df_tasas["Tasa"].round(4)
 
     st.write("Tasas TCAS por año")
     st.dataframe(df_tasas)
@@ -212,7 +217,7 @@ if st.button("Enviar"):
     # -----------------------
     # 📈 PROYECCIÓN
     # -----------------------
-    tasa_media = np.mean(list(tasas.values()))
+    tasa_media = np.mean(list(tasas.values())) * 1000
     crecimiento_operacional = crecimiento_operacional / 100
 
     ultimo_año_vuelos = max(vuelos_por_año)
@@ -223,13 +228,35 @@ if st.button("Enviar"):
     for i in range(1, int(años_proyeccion)+1):
         año = ultimo_año_vuelos + i
         vuelos = vuelos_actuales * (1+crecimiento_operacional)**i
-        eventos_estimados = tasa_media * vuelos
+        eventos_estimados = (tasa_media / 1000) * vuelos
         proyeccion.append([año,vuelos,eventos_estimados])
 
     df_proyeccion = pd.DataFrame(
-        proyeccion,
-        columns=["año","vuelos_proyectados","eventos_tcas_estimados"]
-    ).round(2)
+    proyeccion,
+    columns=["año","vuelos_proyectados","eventos_tcas_estimados"]
+)
+
+# -----------------------
+# 📈 TASA PROYECTADA LINEAL
+# -----------------------
+años_hist = sorted(df_tasas["Año"].values)
+tasas_hist = df_tasas["Tasa"].values
+
+if len(años_hist) >= 2:
+    pendiente = (tasas_hist[-1] - tasas_hist[0]) / (años_hist[-1] - años_hist[0])
+else:
+    pendiente = 0
+
+tasas_proyectadas = []
+
+for año in df_proyeccion["año"]:
+    tasa = tasas_hist[-1] + pendiente * (año - años_hist[-1])
+    tasas_proyectadas.append(tasa)
+
+df_proyeccion["tasa_tcas_por_1000_vuelos"] = np.round(tasas_proyectadas, 4)
+
+# Redondeo general (menos preciso que tasas)
+df_proyeccion = df_proyeccion.round(2)
 
     st.subheader("Proyección")
     st.dataframe(df_proyeccion)
