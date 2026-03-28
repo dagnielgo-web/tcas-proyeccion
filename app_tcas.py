@@ -73,19 +73,11 @@ if st.button("Enviar"):
 
             if not filas_evento.empty:
 
-                fases_excluidas = ["PARKING", "FINAL APPROACH"]
+                evento = filas_evento.iloc[0]
 
-                filas_validas = filas_evento[
-                    ~filas_evento["FLIGHT__PHASE"].astype(str).str.upper().isin(fases_excluidas)
-                ]
-
-                evento = filas_validas.iloc[0] if not filas_validas.empty else filas_evento.iloc[0]
-
-                # Año
                 year_raw = int(evento["GMT__YEAR"])
                 año = 2000 + year_raw if year_raw < 100 else year_raw
 
-                # Hora Colombia
                 hora_utc = int(evento["GMT__HOUR"])
                 hora_col = (hora_utc - 5) % 24
 
@@ -111,9 +103,9 @@ if st.button("Enviar"):
         st.error("No hay datos en ese rango")
         st.stop()
 
-    st.subheader("Eventos detectados")
-    st.write(len(df_eventos))
-
+    # =========================
+    # 📊 EVENTOS POR AÑO
+    # =========================
     eventos_por_año = df_eventos.groupby("año").size()
 
     vuelos_por_año = {
@@ -126,32 +118,21 @@ if st.button("Enviar"):
         if año in vuelos_por_año:
             tasas[año] = (eventos_por_año[año] / vuelos_por_año[año]) * 1000
 
-    # =======================
+    # =========================
     # 🗺️ HEATMAP ACTUAL
-    # =======================
-
+    # =========================
     ultimo_año = df_eventos["año"].max()
     df_ultimo = df_eventos[df_eventos["año"] == ultimo_año]
 
     mapa = folium.Map(location=[4.5, -74], zoom_start=6)
     HeatMap(df_ultimo[["lat","lon"]].values).add_to(mapa)
 
-    for _, row in df_ultimo.iterrows():
-        folium.CircleMarker(
-            location=[row["lat"], row["lon"]],
-            radius=3,
-            color="red",
-            fill=True,
-            popup=f"Año: {row['año']} | Hora: {row['hora']}:00"
-        ).add_to(mapa)
-
-    st.subheader(f"Heatmap año {ultimo_año}")
+    st.subheader(f"Heatmap año {ultimo_año} | Eventos: {len(df_ultimo)}")
     st.components.v1.html(mapa._repr_html_(), height=600)
 
-    # =======================
+    # =========================
     # 📈 PROYECCIÓN
-    # =======================
-
+    # =========================
     factor_crecimiento = 1 + (crecimiento_operacional / 100)
     eventos_base = len(df_ultimo)
 
@@ -163,10 +144,9 @@ if st.button("Enviar"):
 
     df_proy = pd.DataFrame(proyecciones, columns=["Año","Eventos_proyectados"])
 
-    # =======================
+    # =========================
     # 🔥 HEATMAP PROYECTADO
-    # =======================
-
+    # =========================
     coords = df_ultimo[["lat","lon"]].values
     kde = KernelDensity(bandwidth=0.5).fit(coords)
 
@@ -183,17 +163,16 @@ if st.button("Enviar"):
     mapa_proy = folium.Map(location=[4.5, -74], zoom_start=6)
     HeatMap(coords_hot).add_to(mapa_proy)
 
-    st.subheader(f"Heatmap proyectado año {df_proy['Año'].iloc[-1]}")
+    st.subheader(f"Heatmap proyectado año {df_proy['Año'].iloc[-1]} | Eventos proyectados: {n_puntos}")
     st.components.v1.html(mapa_proy._repr_html_(), height=600)
 
-    # =======================
-    # 📊 TABLA FINAL UNIFICADA
-    # =======================
-
-    tabla_final = []
+    # =========================
+    # 📊 TABLA COMPLETA
+    # =========================
+    tabla = []
 
     for año in eventos_por_año.index:
-        tabla_final.append([
+        tabla.append([
             año,
             eventos_por_año[año],
             vuelos_por_año.get(año, np.nan),
@@ -201,10 +180,10 @@ if st.button("Enviar"):
             np.nan
         ])
 
-    tasa_base = list(tasas.values())[-1] if len(tasas) > 0 else 0
+    tasa_base = list(tasas.values())[-1]
 
     for i, row in df_proy.iterrows():
-        tabla_final.append([
+        tabla.append([
             row["Año"],
             row["Eventos_proyectados"],
             np.nan,
@@ -212,24 +191,19 @@ if st.button("Enviar"):
             tasa_base * (factor_crecimiento ** (i+1))
         ])
 
-    df_tabla = pd.DataFrame(tabla_final, columns=[
+    df_tabla = pd.DataFrame(tabla, columns=[
         "Año","Eventos","Vuelos","Tasa_real_x1000","Tasa_proyectada_x1000"
     ]).sort_values("Año")
 
     st.subheader("Tasas TCAS por cada 1000 vuelos (Histórico + Proyección)")
     st.dataframe(df_tabla.round(3))
 
-    # =======================
-    # 📊 GRÁFICAS
-    # =======================
+    # =========================
+    # 📊 GRÁFICAS ORIGINALES
+    # =========================
 
     st.subheader("Eventos por hora (Colombia)")
     df_eventos.groupby("hora").size().plot(kind="bar")
-    st.pyplot(plt.gcf())
-
-    st.subheader("Crecimiento proyectado")
-    plt.figure()
-    plt.plot(df_proy["Año"], df_proy["Eventos_proyectados"], marker='o')
     st.pyplot(plt.gcf())
 
     st.subheader("Eventos por fase")
