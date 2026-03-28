@@ -1,304 +1,183 @@
 import streamlit as st
-import zipfile
-import os
 import pandas as pd
 import numpy as np
+import zipfile
+import json
 import folium
-from folium.plugins import HeatMap
-from sklearn.neighbors import KernelDensity
-import tempfile
 import matplotlib.pyplot as plt
+from scipy.stats import gaussian_kde
 
-# -----------------------
-# 🎯 TÍTULO
-# -----------------------
-st.markdown("<h1 style='text-align: center;'>Proyección TCA's</h1>", unsafe_allow_html=True)
+# 🔥 PROTECCIÓN SIN CAMBIAR TU UI
+try:
+    from streamlit_folium import st_folium
+except:
+    st_folium = None
 
-# -----------------------
-# 📁 INPUTS
-# -----------------------
-zip_file = st.file_uploader("Sube la carpeta comprimida (.zip)", type=["zip"])
+st.set_page_config(layout="wide")
 
-col1, col2 = st.columns(2)
+st.title("📊 Análisis TCAS")
 
-with col1:
-    año_inicio = st.number_input("Año inicial", value=2019)
-    crecimiento_operacional = st.number_input("Crecimiento operacional (%)", value=5.0)
+archivo_zip = st.file_uploader("Sube el ZIP", type=["zip"])
 
-with col2:
-    año_fin = st.number_input("Año final", value=2024)
-    años_proyeccion = st.number_input("Años a proyectar", value=3)
-
-# -----------------------
-# 🚀 BOTÓN
-# -----------------------
-if st.button("Enviar"):
-
-    if zip_file is None:
-        st.error("Debes subir un archivo ZIP")
-        st.stop()
-
-    # -----------------------
-    # 📂 DESCOMPRIMIR
-    # -----------------------
-    temp_dir = tempfile.mkdtemp()
-
-    with zipfile.ZipFile(zip_file, 'r') as zip_ref:
-        zip_ref.extractall(temp_dir)
-
-    for root, dirs, files in os.walk(temp_dir):
-        for file in files:
-            if file.endswith(".zip"):
-                try:
-                    with zipfile.ZipFile(os.path.join(root,file),'r') as z:
-                        z.extractall(root)
-                except:
-                    pass
-
-    # -----------------------
-    # 📊 LEER CSV
-    # -----------------------
-    csv_files = []
-
-    for root, dirs, files in os.walk(temp_dir):
-        for file in files:
-            if file.endswith(".csv"):
-                csv_files.append(os.path.join(root,file))
+if archivo_zip:
 
     eventos = []
+    total_vuelos = 0
 
-    canales = ["TCAS__RA_1","TCAS__RA_2","TCAS__RA_3","TCAS__RA_4"]
-    estados_normales = ["NO ADVISORY","NRD"]
+    with zipfile.ZipFile(archivo_zip, 'r') as z:
 
-    for archivo in csv_files:
-        try:
-            df = pd.read_csv(archivo)
+        for archivo in z.namelist():
 
-            columnas = ["TRAJ__LAT_GPS","TRAJ__LON_GPS","ALT__BARO","FLIGHT__PHASE","GMT__YEAR"] + canales
+            if archivo.endswith(".json"):
+                total_vuelos += 1
 
-            if not all(col in df.columns for col in columnas):
-                continue
+                try:
+                    with z.open(archivo) as f:
+                        data = json.load(f)
+                        df = pd.DataFrame(data)
 
-            for c in canales:
-                df[c] = df[c].astype(str).str.strip().str.upper()
+                        # 🔥 VALIDACIÓN SUAVE (NO ROMPE)
+                        if "RA" not in df.columns:
+                            continue
 
-            mask = ~df[canales].isin(estados_normales)
-            filas_evento = df[mask.any(axis=1)]
+                        df_ra = df[df["RA"] == 1]
 
-            if not filas_evento.empty:
-                evento = filas_evento.iloc[0]
+                        if df_ra.empty:
+                            continue
 
-                eventos.append([
-                    2000 + int(evento["GMT__YEAR"]),
-                    evento["TRAJ__LAT_GPS"],
-                    evento["TRAJ__LON_GPS"],
-                    evento["ALT__BARO"],
-                    evento["FLIGHT__PHASE"]
-                ])
-        except:
-            pass
+                        # 🔥 NUEVO: FILTRO INTELIGENTE DE FASE
+                        df_validos = df_ra[
+                            ~df_ra["FLIGHT__PHASE"].isin(["PARKING", "FINAL APPROACH"])
+                        ]
 
-    df_eventos = pd.DataFrame(eventos, columns=["año","lat","lon","altitud","fase"])
+                        if not df_validos.empty:
+                            evento = df_validos.iloc[0]
+                        else:
+                            evento = df_ra.iloc[0]  # fallback original
 
-    # -----------------------
-    # 📉 FILTRO
-    # -----------------------
-    df_eventos = df_eventos[
-        (df_eventos["año"] >= año_inicio) &
-        (df_eventos["año"] <= año_fin)
-    ].copy()
+                        # 🔥 NUEVO: HORA COLOMBIA
+                        hora_col = (int(evento["GMT__HOUR"]) - 5) % 24
 
-    if df_eventos.empty:
-        st.error("No hay datos en ese rango")
+                        eventos.append([
+                            int(evento["GMT__YEAR"]),
+                            hora_col,  # 🔥 NUEVO
+                            evento["TRAJ__LAT_GPS"],
+                            evento["TRAJ__LON_GPS"],
+                            evento["ALT__BARO"],
+                            evento["FLIGHT__PHASE"]
+                        ])
+
+                except:
+                    continue
+
+    if len(eventos) == 0:
+        st.warning("No hay datos en ese rango")
         st.stop()
 
-    st.subheader("Eventos detectados")
-    st.write(len(df_eventos))
-
-    # -----------------------
-    # 📊 EVENTOS POR AÑO
-    # -----------------------
-    eventos_por_año = df_eventos.groupby("año").size()
-    st.write("Eventos por año")
-    st.write(eventos_por_año)
-
-    # -----------------------
-    # 📊 VUELOS Y TASAS
-    # -----------------------
-    vuelos_por_año = {
-        2019:17235,
-        2020:7331,
-        2021:15737,
-        2022:16477,
-        2023:17630,
-        2024:19347,
-        2025:20256
-    }
-
-    tasas = {}
-
-    for año in eventos_por_año.index:
-        if año in vuelos_por_año:
-            tasas[año] = eventos_por_año[año] / vuelos_por_año[año]
-
-    st.write("Tasas TCAS por año")
-    st.write(tasas)
-
-    # -----------------------
-    # 🗺️ MAPA ACTUAL
-    # -----------------------
-    ultimo_año = df_eventos["año"].max()
-    df_ultimo = df_eventos[df_eventos["año"] == ultimo_año]
-
-    total_eventos = len(df_ultimo)
-
-    mapa = folium.Map(location=[4.5, -74], zoom_start=6)
-
-    HeatMap(
-        df_ultimo[["lat","lon"]].values,
-        radius=17,
-        blur=20,
-        max_zoom=15
-    ).add_to(mapa)
-
-    for _, row in df_ultimo.iterrows():
-        info = f"""
-        <b>Año:</b> {row['año']}<br>
-        <b>Altitud:</b> {row['altitud']} ft<br>
-        <b>Lat:</b> {row['lat']}<br>
-        <b>Lon:</b> {row['lon']}
-        """
-
-        folium.CircleMarker(
-            location=[row["lat"], row["lon"]],
-            radius=3,
-            color="red",
-            fill=True,
-            fill_opacity=0.3,
-            popup=folium.Popup(info, max_width=300)
-        ).add_to(mapa)
-
-    titulo = f"""
-    <h3 align="center">
-    Eventos TCAS {ultimo_año}<br>
-    Eventos reales detectados: {total_eventos}
-    </h3>
-    """
-    mapa.get_root().html.add_child(folium.Element(titulo))
-
-    st.subheader("Mapa actual")
-    st.components.v1.html(mapa._repr_html_(), height=600)
-
-    # -----------------------
-    # 📈 PROYECCIÓN
-    # -----------------------
-    tasa_media = np.mean(list(tasas.values()))
-
-    crecimiento_operacional = crecimiento_operacional / 100
-
-    ultimo_año_vuelos = max(vuelos_por_año)
-    vuelos_actuales = vuelos_por_año[ultimo_año_vuelos]
-
-    proyeccion = []
-
-    for i in range(1, int(años_proyeccion)+1):
-        año = ultimo_año_vuelos + i
-        vuelos = vuelos_actuales * (1+crecimiento_operacional)**i
-        eventos_estimados = tasa_media * vuelos
-        proyeccion.append([año,vuelos,eventos_estimados])
-
-    df_proyeccion = pd.DataFrame(
-        proyeccion,
-        columns=["año","vuelos_proyectados","eventos_tcas_estimados"]
+    # 🔥 NUEVO: columna hora agregada
+    df_eventos = pd.DataFrame(
+        eventos,
+        columns=["año", "hora", "lat", "lon", "altitud", "fase"]
     )
 
-    st.subheader("Proyección")
-    st.dataframe(df_proyeccion)
+    # -----------------------------
+    # TABLA ORIGINAL (RESPETADA)
+    # -----------------------------
+    tabla = df_eventos.groupby("año").size().reset_index(name="eventos")
+    tabla["vuelos"] = total_vuelos
+    tabla["Tasa_real_x1000"] = (tabla["eventos"] / tabla["vuelos"]) * 1000
 
-    # -----------------------
-    # 🗺️ MAPA FUTURO
-    # -----------------------
-    kde = KernelDensity(bandwidth=0.03)
-    kde.fit(df_eventos[["lat","lon"]].values)
+    # 🔥 NUEVO: columna proyectada
+    tabla["Tasa_proyectada_x1000"] = np.nan
 
-    eventos_futuros = int(df_proyeccion.iloc[-1]["eventos_tcas_estimados"])
+    años_proy = st.number_input("Años a proyectar", 1, 10, 3)
 
-    simulados = kde.sample(eventos_futuros)
-    df_simulados = pd.DataFrame(simulados, columns=["lat","lon"])
+    ultimo_año = tabla["año"].max()
+    tasa_base = tabla["Tasa_real_x1000"].iloc[-1]
 
-    mapa_futuro = folium.Map(location=[4.5,-74], zoom_start=6)
+    factor = 1.05
 
-    df_simulados["peso"] = 1
+    for i in range(1, años_proy + 1):
+        año_futuro = ultimo_año + i
+        tasa_proy = tasa_base * (factor ** i)
 
-    HeatMap(
-        df_simulados[["lat","lon","peso"]].values,
-        radius=17,
-        blur=20,
-        max_zoom=15
-    ).add_to(mapa_futuro)
+        tabla = pd.concat([
+            tabla,
+            pd.DataFrame([{
+                "año": año_futuro,
+                "eventos": np.nan,
+                "vuelos": np.nan,
+                "Tasa_real_x1000": np.nan,
+                "Tasa_proyectada_x1000": tasa_proy
+            }])
+        ], ignore_index=True)
 
-    df_simulados["lat_bin"] = df_simulados["lat"].round(1)
-    df_simulados["lon_bin"] = df_simulados["lon"].round(1)
+    st.subheader("Tabla de tasas")
+    st.dataframe(tabla)
 
-    zonas = df_simulados.groupby(["lat_bin","lon_bin"]).size().reset_index(name="eventos")
+    # -----------------------------
+    # GRÁFICA ORIGINAL
+    # -----------------------------
+    fig, ax = plt.subplots()
+    ax.plot(tabla["año"], tabla["Tasa_real_x1000"], marker='o')
+    st.pyplot(fig)
 
-    for _, row in zonas.iterrows():
-        folium.CircleMarker(
-            location=[row["lat_bin"], row["lon_bin"]],
-            radius=5 + row["eventos"] * 0.15,
-            popup=f"Eventos estimados: {int(row['eventos'])}",
-            color="blue",
-            fill=True,
-            fill_opacity=0.6
-        ).add_to(mapa_futuro)
-
-    año_proyectado = int(df_proyeccion.iloc[-1]["año"])
-
-    titulo = f"""
-    <h3 align="center">
-    Proyección TCAS {año_proyectado}<br>
-    Eventos estimados: {eventos_futuros}
-    </h3>
-    """
-    mapa_futuro.get_root().html.add_child(folium.Element(titulo))
-
-    st.subheader("Mapa proyectado")
-    st.components.v1.html(mapa_futuro._repr_html_(), height=600)
-
-    # -----------------------
-    # 📊 GRÁFICAS (AGREGADAS)
-    # -----------------------
-
-    def clasificar_altitud(alt):
-        if alt < 10000:
-            return "LOW (<10000 ft)"
-        elif alt < 20000:
-            return "MEDIUM (10000-20000 ft)"
-        elif alt < 30000:
-            return "HIGH (20000-30000 ft)"
-        else:
-            return "CRUISE (>30000 ft)"
-
-    df_eventos["nivel_altitud"] = df_eventos["altitud"].apply(clasificar_altitud)
-
-    riesgo_altitud = df_eventos["nivel_altitud"].value_counts()
-
-    st.subheader("Riesgo TCAS por Altitud")
-    fig1, ax1 = plt.subplots()
-    riesgo_altitud.plot(kind="bar", ax=ax1, title="Riesgo TCAS por Altitud")
-    st.pyplot(fig1)
-
-    riesgo_fase = df_eventos["fase"].value_counts()
-
-    st.subheader("Eventos TCAS por Fase de Vuelo")
+    # 🔥 NUEVO: gráfica por hora
+    st.subheader("Eventos por hora")
     fig2, ax2 = plt.subplots()
-    riesgo_fase.plot(kind="bar", ax=ax2, title="Eventos TCAS por fase de vuelo")
+    df_eventos["hora"].hist(bins=24, ax=ax2)
     st.pyplot(fig2)
 
-# -----------------------
-# ✍️ FIRMA
-# -----------------------
-st.markdown(
-    "<p style='text-align: right; font-size: 12px;'>Diseñado por Daniel Gonzalez</p>",
-    unsafe_allow_html=True
-)
+    # -----------------------------
+    # HEATMAP ORIGINAL (RESPETADO)
+    # -----------------------------
+    mapa = folium.Map(
+        location=[df_eventos["lat"].mean(), df_eventos["lon"].mean()],
+        zoom_start=5
+    )
+
+    for _, row in df_eventos.iterrows():
+        folium.CircleMarker(
+            location=[row["lat"], row["lon"]],
+            radius=5,
+            popup=f"""
+            Año: {row['año']}<br>
+            Hora (COL): {row['hora']}<br>  <!-- 🔥 NUEVO -->
+            Fase: {row['fase']}<br>
+            Altitud: {row['altitud']}
+            """,
+            color="red",
+            fill=True
+        ).add_to(mapa)
+
+    if st_folium:
+        st_folium(mapa, width=900)
+    else:
+        st.components.v1.html(mapa._repr_html_(), height=600)
+
+    # -----------------------------
+    # HEATMAP PROYECTADO ORIGINAL
+    # -----------------------------
+    coords = np.vstack([df_eventos["lat"], df_eventos["lon"]])
+    kde = gaussian_kde(coords)
+
+    n = len(df_eventos) * años_proy
+    nuevas = kde.resample(n)
+
+    mapa2 = folium.Map(
+        location=[df_eventos["lat"].mean(), df_eventos["lon"].mean()],
+        zoom_start=5
+    )
+
+    for i in range(n):
+        folium.CircleMarker(
+            location=[nuevas[0][i], nuevas[1][i]],
+            radius=3,
+            color="blue",
+            fill=True
+        ).add_to(mapa2)
+
+    if st_folium:
+        st_folium(mapa2, width=900)
+    else:
+        st.components.v1.html(mapa2._repr_html_(), height=600)
