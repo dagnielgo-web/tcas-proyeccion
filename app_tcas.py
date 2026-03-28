@@ -4,17 +4,20 @@ import numpy as np
 import zipfile
 import json
 import folium
-from streamlit_folium import st_folium
 from scipy.stats import gaussian_kde
 import matplotlib.pyplot as plt
+
+# 🔥 INTENTO DE IMPORT SEGURO
+try:
+    from streamlit_folium import st_folium
+    FOLIUM_OK = True
+except:
+    FOLIUM_OK = False
 
 st.set_page_config(layout="wide")
 
 st.title("📊 Análisis y Proyección TCAS")
 
-# -----------------------------
-# CARGA DE ARCHIVO
-# -----------------------------
 archivo_zip = st.file_uploader("Sube el archivo ZIP de vuelos", type=["zip"])
 
 if archivo_zip:
@@ -32,36 +35,29 @@ if archivo_zip:
                 try:
                     with z.open(archivo) as f:
                         data = json.load(f)
-
                         df = pd.DataFrame(data)
 
-                        # 🔍 VALIDAR COLUMNAS CLAVE
-                        columnas_requeridas = [
+                        columnas = [
                             "RA", "GMT__YEAR", "GMT__HOUR",
                             "TRAJ__LAT_GPS", "TRAJ__LON_GPS",
                             "ALT__BARO", "FLIGHT__PHASE"
                         ]
 
-                        if not all(col in df.columns for col in columnas_requeridas):
+                        if not all(c in df.columns for c in columnas):
                             continue
 
-                        # -----------------------------
-                        # FILTRO DE EVENTOS
-                        # -----------------------------
                         df_validos = df[
                             (df["RA"] == 1) &
                             (~df["FLIGHT__PHASE"].isin(["PARKING", "FINAL APPROACH"]))
                         ]
 
                         if not df_validos.empty:
-
                             evento = df_validos.iloc[0]
 
                             año = int(evento["GMT__YEAR"])
 
-                            # 🕒 HORA COLOMBIA (UTC-5)
-                            hora_utc = int(evento["GMT__HOUR"])
-                            hora_col = (hora_utc - 5) % 24
+                            # 🕒 HORA COLOMBIA
+                            hora_col = (int(evento["GMT__HOUR"]) - 5) % 24
 
                             eventos.append([
                                 año,
@@ -71,95 +67,58 @@ if archivo_zip:
                                 float(evento["ALT__BARO"]),
                                 str(evento["FLIGHT__PHASE"])
                             ])
-
                 except:
                     continue
 
-    # -----------------------------
-    # VALIDACIÓN FINAL
-    # -----------------------------
     if len(eventos) == 0:
         st.warning("No hay datos válidos en el archivo")
         st.stop()
 
-    # -----------------------------
-    # DATAFRAME
-    # -----------------------------
     df_eventos = pd.DataFrame(
         eventos,
         columns=["año", "hora", "lat", "lon", "altitud", "fase"]
     )
 
     # -----------------------------
-    # TABLA DE TASAS
+    # TABLA
     # -----------------------------
     tabla = df_eventos.groupby("año").size().reset_index(name="eventos")
     tabla["vuelos"] = total_vuelos
     tabla["Tasa_real_x1000"] = (tabla["eventos"] / tabla["vuelos"]) * 1000
 
-    # -----------------------------
-    # PROYECCIÓN
-    # -----------------------------
     años_proyectar = st.number_input("Años a proyectar", 1, 10, 3)
 
     ultimo_año = tabla["año"].max()
     tasa_base = tabla["Tasa_real_x1000"].iloc[-1]
 
-    factor_crecimiento = 1.05
+    factor = 1.05
 
-    proyecciones = []
-
+    proy = []
     for i in range(1, años_proyectar + 1):
-        año_futuro = ultimo_año + i
-        tasa_proy = tasa_base * (factor_crecimiento ** i)
-
-        proyecciones.append([
-            año_futuro,
+        proy.append([
+            ultimo_año + i,
             np.nan,
             np.nan,
-            tasa_proy
+            tasa_base * (factor ** i)
         ])
 
-    df_proy = pd.DataFrame(
-        proyecciones,
-        columns=["año", "eventos", "vuelos", "Tasa_real_x1000"]
-    )
-
+    df_proy = pd.DataFrame(proy, columns=tabla.columns)
     df_tabla = pd.concat([tabla, df_proy], ignore_index=True)
 
-    # -----------------------------
-    # TABLA FINAL
-    # -----------------------------
-    st.subheader("📋 Tabla de tasas (por cada 1000 vuelos)")
+    st.subheader("📋 Tabla de tasas")
     st.dataframe(df_tabla)
 
     # -----------------------------
-    # GRÁFICA DE TASAS
+    # GRÁFICA
     # -----------------------------
-    st.subheader("📈 Evolución de tasas")
-
     fig, ax = plt.subplots()
     ax.plot(df_tabla["año"], df_tabla["Tasa_real_x1000"], marker='o')
-    ax.set_xlabel("Año")
-    ax.set_ylabel("Tasa x1000")
-    ax.set_title("Tasa TCAS")
     st.pyplot(fig)
-
-    # -----------------------------
-    # GRÁFICA POR HORA
-    # -----------------------------
-    st.subheader("🕒 Distribución de eventos por hora (Colombia)")
-
-    fig2, ax2 = plt.subplots()
-    df_eventos["hora"].hist(ax=ax2, bins=24)
-    ax2.set_xlabel("Hora")
-    ax2.set_ylabel("Eventos")
-    st.pyplot(fig2)
 
     # -----------------------------
     # HEATMAP REAL
     # -----------------------------
-    st.subheader(f"🔥 Heatmap de eventos reales | Eventos: {len(df_eventos)}")
+    st.subheader("🔥 Heatmap real")
 
     mapa = folium.Map(
         location=[df_eventos["lat"].mean(), df_eventos["lon"].mean()],
@@ -171,45 +130,50 @@ if archivo_zip:
             location=[row["lat"], row["lon"]],
             radius=5,
             popup=f"""
-            <b>Año:</b> {row['año']}<br>
-            <b>Hora (COL):</b> {row['hora']}:00<br>
-            <b>Fase:</b> {row['fase']}<br>
-            <b>Altitud:</b> {row['altitud']}
+            Año: {row['año']}<br>
+            Hora: {row['hora']}<br>
+            Fase: {row['fase']}
             """,
             color="red",
             fill=True
         ).add_to(mapa)
 
-    st_folium(mapa, width=900)
+    # 🔥 MOSTRAR MAPA (CON O SIN LIBRERÍA)
+    if FOLIUM_OK:
+        st_folium(mapa, width=900)
+    else:
+        st.warning("streamlit-folium no instalado → mostrando versión básica")
+        st.components.v1.html(mapa._repr_html_(), height=600)
 
     # -----------------------------
-    # HEATMAP PROYECTADO (KDE)
+    # HEATMAP PROYECTADO
     # -----------------------------
-    st.subheader("🔥 Heatmap proyectado con hotspots")
-
-    coords = np.vstack([df_eventos["lat"], df_eventos["lon"]])
+    st.subheader("🔥 Heatmap proyectado")
 
     try:
+        coords = np.vstack([df_eventos["lat"], df_eventos["lon"]])
         kde = gaussian_kde(coords)
 
-        n_puntos = len(df_eventos) * años_proyectar
-
-        nuevas_coords = kde.resample(n_puntos)
+        n = len(df_eventos) * años_proyectar
+        nuevas = kde.resample(n)
 
         mapa2 = folium.Map(
             location=[df_eventos["lat"].mean(), df_eventos["lon"].mean()],
             zoom_start=5
         )
 
-        for i in range(n_puntos):
+        for i in range(n):
             folium.CircleMarker(
-                location=[nuevas_coords[0][i], nuevas_coords[1][i]],
+                location=[nuevas[0][i], nuevas[1][i]],
                 radius=3,
                 color="blue",
                 fill=True
             ).add_to(mapa2)
 
-        st_folium(mapa2, width=900)
+        if FOLIUM_OK:
+            st_folium(mapa2, width=900)
+        else:
+            st.components.v1.html(mapa2._repr_html_(), height=600)
 
     except:
-        st.warning("No se pudo generar el heatmap proyectado (datos insuficientes)")
+        st.warning("No se pudo generar proyección")
