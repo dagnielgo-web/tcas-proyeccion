@@ -52,8 +52,8 @@ if st.button("Enviar"):
                 try:
                     with zipfile.ZipFile(os.path.join(root,file),'r') as z:
                         z.extractall(root)
-                except:
-                    pass
+                except Exception as e:
+                    st.warning(f"Error en archivo {archivo}: {e}")
 
     # -----------------------
     # 📊 LEER CSV
