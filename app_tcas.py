@@ -97,11 +97,11 @@ if st.button("Enviar"):
                     ~filas_evento["FLIGHT__PHASE"].astype(str).str.upper().isin(fases_excluidas)
                 ]
 
-                # ✅ Tomar evento válido
-                if not filas_validas.empty:
-                    evento = filas_validas.iloc[0]
-                else:
-                    evento = filas_evento.iloc[0]
+# ✅ SOLO tomar eventos válidos (SIN fallback)
+                if filas_validas.empty:
+                    continue
+
+                evento = filas_validas.loc[filas_validas["ALT__BARO"].idxmax()]
 
                 eventos.append([
                     2000 + int(evento["GMT__YEAR"]),
