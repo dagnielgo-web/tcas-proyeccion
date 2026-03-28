@@ -9,7 +9,7 @@ from sklearn.neighbors import KernelDensity
 import tempfile
 import matplotlib.pyplot as plt
 
-st.markdown("<h1 style='text-align: center;'>Proyección TCAS (Traffic Collision Avoidance System)</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center;'>Proyección TCA's</h1>", unsafe_allow_html=True)
 
 zip_file = st.file_uploader("Sube la carpeta comprimida (.zip)", type=["zip"])
 
@@ -84,14 +84,14 @@ if st.button("Enviar"):
                 else:
                     evento = filas_evento.iloc[0]
 
-                # ✅ AÑO CORRECTO
+                # AÑO
                 year_raw = int(evento["GMT__YEAR"])
                 if year_raw < 100:
                     año = 2000 + year_raw
                 else:
                     año = year_raw
 
-                # ✅ HORA INDEPENDIENTE (UTC → Colombia)
+                # HORA UTC → COLOMBIA
                 hora_utc = int(evento["GMT__HOUR"])
                 hora_col = (hora_utc - 5) % 24
 
@@ -120,10 +120,12 @@ if st.button("Enviar"):
     st.subheader("Eventos detectados")
     st.write(len(df_eventos))
 
+    # EVENTOS POR AÑO
     eventos_por_año = df_eventos.groupby("año").size()
     st.write("Eventos por año")
     st.dataframe(eventos_por_año.astype(float).round(2))
 
+    # VUELOS BASE
     vuelos_por_año = {
         2019:17235, 2020:7331, 2021:15737,
         2022:16477, 2023:17630, 2024:19347, 2025:20256
@@ -137,10 +139,13 @@ if st.button("Enviar"):
 
     df_tasas = pd.DataFrame(list(tasas.items()), columns=["Año","Tasa"])
 
-    st.write("Tasas TCAS por año (por cada 1000 vuelos)")
+    st.subheader("Tasas TCAS por año (por cada 1000 vuelos)")
     st.dataframe(df_tasas)
 
-    # 🗺️ MAPA
+    # =======================
+    # 🗺️ HEATMAP ACTUAL
+    # =======================
+
     ultimo_año = df_eventos["año"].max()
     df_ultimo = df_eventos[df_eventos["año"] == ultimo_año]
 
@@ -154,8 +159,6 @@ if st.button("Enviar"):
         <b>Fase:</b> {row['fase']}<br>
         <b>Altitud:</b> {round(row['altitud'],2)} ft<br>
         <b>Hora Colombia:</b> {row['hora']}:00<br>
-        <b>Lat:</b> {round(row['lat'],5)}<br>
-        <b>Lon:</b> {round(row['lon'],5)}
         """
 
         folium.CircleMarker(
@@ -166,18 +169,87 @@ if st.button("Enviar"):
             popup=folium.Popup(info, max_width=300)
         ).add_to(mapa)
 
-    st.subheader("Mapa actual")
+    st.subheader(f"Heatmap año {ultimo_año}")
     st.components.v1.html(mapa._repr_html_(), height=600)
 
-    # 📊 GRÁFICA POR HORA
+    # =======================
+    # 📈 PROYECCIÓN
+    # =======================
+
+    factor_crecimiento = 1 + (crecimiento_operacional / 100)
+    eventos_base = len(df_ultimo)
+
+    proyecciones = []
+
+    for i in range(1, int(años_proyeccion)+1):
+        año_proy = ultimo_año + i
+        eventos_proy = int(eventos_base * (factor_crecimiento ** i))
+        proyecciones.append([año_proy, eventos_proy])
+
+    df_proy = pd.DataFrame(proyecciones, columns=["Año","Eventos_proyectados"])
+
+    st.subheader("Proyección de eventos")
+    st.dataframe(df_proy)
+
+    # =======================
+    # 📊 TASAS PROYECTADAS
+    # =======================
+
+    tasas_proy = []
+    tasa_base = list(tasas.values())[-1] if len(tasas) > 0 else 0
+
+    for i, row in df_proy.iterrows():
+        tasa = tasa_base * (factor_crecimiento ** (i+1))
+        tasas_proy.append([row["Año"], tasa])
+
+    df_tasas_proy = pd.DataFrame(tasas_proy, columns=["Año","Tasa proyectada"])
+
+    st.subheader("Tasas proyectadas (por cada 1000 vuelos)")
+    st.dataframe(df_tasas_proy)
+
+    # =======================
+    # 🔥 HEATMAP PROYECTADO
+    # =======================
+
+    coords = df_ultimo[["lat","lon"]].values
+
+    kde = KernelDensity(bandwidth=0.5, kernel='gaussian')
+    kde.fit(coords)
+
+    n_puntos = df_proy["Eventos_proyectados"].iloc[-1]
+
+    lat_sim = np.random.uniform(df_ultimo["lat"].min(), df_ultimo["lat"].max(), n_puntos)
+    lon_sim = np.random.uniform(df_ultimo["lon"].min(), df_ultimo["lon"].max(), n_puntos)
+
+    coords_sim = np.vstack([lat_sim, lon_sim]).T
+
+    densidad = kde.score_samples(coords_sim)
+    threshold = np.percentile(densidad, 75)
+
+    coords_hot = coords_sim[densidad > threshold]
+
+    mapa_proy = folium.Map(location=[4.5, -74], zoom_start=6)
+    HeatMap(coords_hot).add_to(mapa_proy)
+
+    st.subheader(f"Heatmap proyectado año {df_proy['Año'].iloc[-1]}")
+    st.components.v1.html(mapa_proy._repr_html_(), height=600)
+
+    # =======================
+    # 📊 GRÁFICAS
+    # =======================
+
     st.subheader("Eventos por hora (Colombia)")
     eventos_hora = df_eventos.groupby("hora").size()
-
     fig_hora, ax_hora = plt.subplots()
     eventos_hora.plot(kind="bar", ax=ax_hora)
     st.pyplot(fig_hora)
 
-    # 📊 ALTITUD
+    st.subheader("Crecimiento proyectado de eventos")
+    fig3, ax3 = plt.subplots()
+    ax3.plot(df_proy["Año"], df_proy["Eventos_proyectados"], marker='o')
+    st.pyplot(fig3)
+
+    # ALTITUD
     def clasificar_altitud(alt):
         if alt < 10000:
             return "LOW"
@@ -190,18 +262,14 @@ if st.button("Enviar"):
 
     df_eventos["nivel_altitud"] = df_eventos["altitud"].apply(clasificar_altitud)
 
-    riesgo_altitud = df_eventos["nivel_altitud"].value_counts()
-
     st.subheader("Riesgo por altitud")
     fig1, ax1 = plt.subplots()
-    riesgo_altitud.plot(kind="bar", ax=ax1)
+    df_eventos["nivel_altitud"].value_counts().plot(kind="bar", ax=ax1)
     st.pyplot(fig1)
-
-    riesgo_fase = df_eventos["fase"].value_counts()
 
     st.subheader("Eventos por fase")
     fig2, ax2 = plt.subplots()
-    riesgo_fase.plot(kind="bar", ax=ax2)
+    df_eventos["fase"].value_counts().plot(kind="bar", ax=ax2)
     st.pyplot(fig2)
 
 st.markdown(
