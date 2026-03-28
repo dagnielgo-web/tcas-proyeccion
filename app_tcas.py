@@ -9,7 +9,7 @@ from sklearn.neighbors import KernelDensity
 import tempfile
 import matplotlib.pyplot as plt
 
-st.markdown("<h1 style='text-align: center;'>Proyección TCA's</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center;'>Proyección TCAS (Traffic Collision Avoidance System)</h1>", unsafe_allow_html=True)
 
 zip_file = st.file_uploader("Sube la carpeta comprimida (.zip)", type=["zip"])
 
