@@ -253,12 +253,19 @@ if st.button("Enviar"):
 
     st.plotly_chart(fig_altitud, use_container_width=True)
 
-    riesgo_fase = df_eventos["fase"].value_counts()
+    df_fase = df_eventos["fase"].value_counts().reset_index()
+    df_fase.columns = ["Fase de Vuelo", "Cantidad de Eventos"]
 
-    st.subheader("Eventos TCAS por Fase de Vuelo General")
-    fig2, ax2 = plt.subplots()
-    riesgo_fase.plot(kind="bar", ax=ax2, title="Eventos TCAS por fase de vuelo")
-    st.pyplot(fig2)
+    fig_fase = px.bar(
+        df_fase,
+        x="Fase de Vuelo",
+        y="Cantidad de Eventos",
+        color="Cantidad de Eventos",
+        title="Eventos TCAS por Fase de Vuelo",
+        color_continuous_scale=px.colors.sequential.Viridis
+    )
+
+    st.plotly_chart(fig_fase, use_container_width=True)
         # -----------------------
     # 🕒 EVENTOS POR HORA
     # -----------------------
@@ -274,12 +281,19 @@ if st.button("Enviar"):
 
     df_eventos["rango_hora"] = df_eventos["hora"].apply(clasificar_hora)
 
-    eventos_por_hora = df_eventos["rango_hora"].value_counts().sort_index()
+    df_hora = df_eventos["rango_hora"].value_counts().sort_index().reset_index()
+    df_hora.columns = ["Rango Horario", "Cantidad de Eventos"]
 
-    st.subheader("Eventos TCAS por Rango Horario Colombiano")
-    fig3, ax3 = plt.subplots()
-    eventos_por_hora.plot(kind="bar", ax=ax3, title="Distribución de eventos por hora del día")
-    st.pyplot(fig3)
+    fig_hora = px.bar(
+        df_hora,
+        x="Rango Horario",
+        y="Cantidad de Eventos",
+        color="Cantidad de Eventos",
+        title="Distribución de eventos por hora del día",
+        color_continuous_scale=px.colors.sequential.Viridis
+    )
+
+    st.plotly_chart(fig_hora, use_container_width=True)
 
 
 
