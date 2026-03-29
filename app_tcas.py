@@ -436,7 +436,7 @@ if st.button("Enviar"):
 # Texto final
     st.markdown(f"""
     ---
-    ### 🧾 Conclusión
+    ###  Conclusión
 
     Se proyecta que en el año **{año_proyectado}** se tenga un incremento de eventos TCAS a **{eventos_proyectados}** en el año, mientras que en el año **{ultimo_año_real}**, en base a datos históricos, se tiene una cantidad de **{eventos_ultimo_año} eventos TCAS RA** en la flota ATR.
 
