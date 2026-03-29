@@ -10,12 +10,12 @@ import tempfile
 import matplotlib.pyplot as plt
 
 # -----------------------
-# 🎯 TÍTULO
+#  TÍTULO
 # -----------------------
-st.markdown("<h1 style='text-align: center;'>Proyección TCAS para ATR 42</h1>", unsafe_allow_html=True)
-
+st.markdown("<h1 style='text-align: center;'>Proyección Eventos TCAS (Traffic Collision Avoidance System)</h1>", unsafe_allow_html=True)
+st.markdown("<h3 style='text-align: center; color: gray;'>Para la flota ATR 42</h3>", unsafe_allow_html=True)
 # -----------------------
-# 📁 INPUTS
+# INPUTS
 # -----------------------
 zip_file = st.file_uploader("Sube la carpeta comprimida (.zip)", type=["zip"])
 
@@ -30,7 +30,7 @@ with col2:
     años_proyeccion = st.number_input("Años a proyectar", value=3)
 
 # -----------------------
-# 🚀 BOTÓN
+#  BOTÓN
 # -----------------------
 if st.button("Enviar"):
 
@@ -39,7 +39,7 @@ if st.button("Enviar"):
         st.stop()
 
     # -----------------------
-    # 📂 DESCOMPRIMIR
+    #  DESCOMPRIMIR
     # -----------------------
     temp_dir = tempfile.mkdtemp()
 
@@ -56,7 +56,7 @@ if st.button("Enviar"):
                     st.warning(f"Error en archivo {archivo}: {e}")
 
     # -----------------------
-    # 📊 LEER CSV
+    #  LEER CSV
     # -----------------------
     csv_files = []
 
@@ -90,14 +90,14 @@ if st.button("Enviar"):
 
             if not filas_evento.empty:
 
-                # 🚫 Fases a excluir
+                #  Fases a excluir
                 fases_excluidas = ["PARKING", "FINAL APPROACH", "TAXI_OUT"]
 
                 filas_validas = filas_evento[
                     ~filas_evento["FLIGHT__PHASE"].astype(str).str.upper().isin(fases_excluidas)
                 ]
 
-# ✅ SOLO tomar eventos válidos (SIN fallback)
+#  SOLO tomar eventos válidos (SIN fallback)
                 if filas_validas.empty:
                     continue
 
@@ -117,7 +117,7 @@ if st.button("Enviar"):
     df_eventos = pd.DataFrame(eventos, columns=["año","lat","lon","altitud","fase","hora"])
 
     # -----------------------
-    # 📉 FILTRO
+    #  FILTRO
     # -----------------------
     df_eventos = df_eventos[
         (df_eventos["año"] >= año_inicio) &
@@ -132,14 +132,14 @@ if st.button("Enviar"):
     st.write(len(df_eventos))
 
     # -----------------------
-    # 📊 EVENTOS POR AÑO
+    #  EVENTOS POR AÑO
     # -----------------------
     eventos_por_año = df_eventos.groupby("año").size()
     st.write("Eventos por año")
     st.dataframe(eventos_por_año.astype(float).round(2))
 
     # -----------------------
-    # 📊 VUELOS Y TASAS
+    #  VUELOS Y TASAS
     # -----------------------
     vuelos_por_año = {
         2015:8505,
@@ -173,7 +173,7 @@ if st.button("Enviar"):
 # st.dataframe(df_tasas)
 
     # -----------------------
-    # 🗺️ MAPA ACTUAL
+    #  MAPA ACTUAL
     # -----------------------
     ultimo_año = df_eventos["año"].max()
     df_ultimo = df_eventos[df_eventos["año"] == ultimo_año]
@@ -219,7 +219,7 @@ if st.button("Enviar"):
     st.components.v1.html(mapa._repr_html_(), height=600)
     
      # -----------------------
-    # 📊 GRÁFICAS
+    #  GRÁFICAS
     # -----------------------
     def clasificar_altitud(alt):
         if alt < 10000:
@@ -267,7 +267,7 @@ if st.button("Enviar"):
 
     st.plotly_chart(fig_fase, use_container_width=True)
         # -----------------------
-    # 🕒 EVENTOS POR HORA
+    #  EVENTOS POR HORA
     # -----------------------
     def clasificar_hora(h):
         if 0 <= h < 6:
@@ -299,7 +299,7 @@ if st.button("Enviar"):
 
 
     # -----------------------
-    # 📈 PROYECCIÓN
+    #  PROYECCIÓN
     # -----------------------
     tasa_media = np.mean(list(tasas.values())) * 1000
     crecimiento_operacional = crecimiento_operacional / 100
@@ -321,13 +321,13 @@ if st.button("Enviar"):
     )
 
 # -----------------------
-# 📈 TASA PROYECTADA LINEAL
+#  TASA PROYECTADA LINEAL
 # -----------------------
     años_hist = np.array(df_tasas["Año"].values)
     tasas_hist = np.array(df_tasas["Tasa"].values)
 
 # -----------------------
-# 📈 REGRESIÓN LINEAL
+#  REGRESIÓN LINEAL
 # -----------------------
     if len(años_hist) >= 2:
         pendiente, intercepto = np.polyfit(años_hist, tasas_hist, 1)
@@ -340,7 +340,7 @@ if st.button("Enviar"):
     for año in df_proyeccion["año"]:
         tasa = pendiente * año + intercepto
 
-    # 🔒 OPCIONAL: evitar tasas negativas
+    #  evitar tasas negativas
         if tasa < 0:
             tasa = 0
 
@@ -359,7 +359,7 @@ if st.button("Enviar"):
     st.subheader("Proyección")
     st.dataframe(df_proyeccion)
     # -----------------------
-# 📊 UNIR TASAS HISTÓRICAS + PROYECTADAS
+#  UNIR TASAS HISTÓRICAS + PROYECTADAS
 # -----------------------
 
 # Tomar tasas proyectadas
@@ -379,7 +379,7 @@ if st.button("Enviar"):
     st.dataframe(df_tasas_total)
 
     # -----------------------
-    # 🗺️ MAPA FUTURO
+    #  MAPA FUTURO
     # -----------------------
     kde = KernelDensity(bandwidth=0.03)
     kde.fit(df_eventos[["lat","lon"]].values)
@@ -429,7 +429,7 @@ if st.button("Enviar"):
     st.components.v1.html(mapa_futuro._repr_html_(), height=600)
     
     # -----------------------
-# 📝 CONCLUSIÓN AUTOMÁTICA
+#  CONCLUSIÓN AUTOMÁTICA
 # -----------------------
 
 # Último año con datos reales
