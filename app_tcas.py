@@ -251,7 +251,7 @@ if st.button("Enviar"):
 
     riesgo_altitud = df_eventos["nivel_altitud"].value_counts()
 
-    st.subheader("Riesgo TCAS por Altitud General")
+    st.subheader("Eventos TCAS por Diferentes Parámetros Historicós")
     import plotly.express as px
 
 # Crear DataFrame seguro para Plotly
@@ -263,7 +263,7 @@ if st.button("Enviar"):
         x="Nivel de Altitud",
         y="Cantidad de Eventos",
         color="Cantidad de Eventos",
-        title="Riesgo TCAS por Altitud",
+        title="Eventos TCAS por Altitud",
         color_continuous_scale=px.colors.sequential.Viridis
     )
 
