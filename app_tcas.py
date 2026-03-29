@@ -16,37 +16,25 @@ col_logo1, col_titulo, col_logo2 = st.columns([1, 4, 1])
 
 # Logo izquierdo
 with col_logo1:
-    st.markdown(
-        """
-        <div style='display: flex; justify-content: center; align-items: center; height: 100%;'>
-            <img src='logo_esave.png' width='80'>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+    st.markdown("<div style='height: 100%; display: flex; align-items: center; justify-content: center;'>", unsafe_allow_html=True)
+    st.image("logo_esave.png", width=80)
+    st.markdown("</div>", unsafe_allow_html=True)
 
-# Título y subtítulo centrados
+# Título y subtítulo
 with col_titulo:
     st.markdown(
-        """
-        <div style='text-align: center; line-height: 1.2;'>
-            <h1>Proyección Eventos TCAS (Traffic Collision Avoidance System)</h1>
-            <h3 style='color: gray;'>Para la flota ATR 42</h3>
-        </div>
-        """,
+        "<div style='text-align: center; line-height: 1.2;'>"
+        "<h1>Proyección Eventos TCAS (Traffic Collision Avoidance System)</h1>"
+        "<h3 style='color: gray;'>Para la flota ATR 42</h3>"
+        "</div>",
         unsafe_allow_html=True
     )
 
 # Logo derecho
 with col_logo2:
-    st.markdown(
-        """
-        <div style='display: flex; justify-content: center; align-items: center; height: 100%;'>
-            <img src='logo_satena.png' width='80'>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+    st.markdown("<div style='height: 100%; display: flex; align-items: center; justify-content: center;'>", unsafe_allow_html=True)
+    st.image("logo_satena.png", width=80)
+    st.markdown("</div>", unsafe_allow_html=True)
 # -----------------------
 # INPUTS
 # -----------------------
