@@ -4,4 +4,3 @@ numpy
 folium
 scikit-learn
 matplotlib
-plotly
