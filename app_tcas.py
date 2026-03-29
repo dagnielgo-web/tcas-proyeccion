@@ -109,7 +109,7 @@ if st.button("Enviar"):
                     evento["TRAJ__LON_GPS"],
                     evento["ALT__BARO"],
                     evento["FLIGHT__PHASE"],
-                    int(evento["GMT__HOUR"])
+                    (int(evento["GMT__HOUR"]) - 5) % 24
                 ])
         except:
             pass
@@ -192,7 +192,7 @@ if st.button("Enviar"):
     for _, row in df_ultimo.iterrows():
         info = f"""
         <b>Año:</b> {row['año']}<br>
-        <b>Hora (UTC):</b> {row['hora']}:00<br>
+        <b>Hora (COL - UTC-5):</b> {row['hora']}:00<br>
         <b>Altitud:</b> {round(row['altitud'],2)} ft<br>
         <b>Lat:</b> {round(row['lat'],5)}<br>
         <b>Lon:</b> {round(row['lon'],5)}
@@ -388,7 +388,7 @@ if st.button("Enviar"):
 
     eventos_por_hora = df_eventos["rango_hora"].value_counts().sort_index()
 
-    st.subheader("Eventos TCAS por Rango Horario")
+    st.subheader("Eventos TCAS por Rango Horario Colombiano")
     fig3, ax3 = plt.subplots()
     eventos_por_hora.plot(kind="bar", ax=ax3, title="Distribución de eventos por hora del día")
     st.pyplot(fig3)
