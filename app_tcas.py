@@ -12,26 +12,22 @@ import matplotlib.pyplot as plt
 # -----------------------
 #  TÍTULO
 # -----------------------
+col_logo1, col_titulo, col_logo2 = st.columns([1, 4, 1])
 
+# Logo izquierdo
+with col_logo1:
+    st.write("")  # espaciador para centrar verticalmente
+    st.image("assets/logo_esave.png", width=80)
 
-# Div principal con display flex
-st.markdown(
-    """
-    <div style='display: flex; align-items: center; justify-content: center;'>
-        <div style='flex:1; display: flex; justify-content: center;'>
-            <img src='logo_esave.png' width='80'>
-        </div>
-        <div style='flex:4; text-align: center;'>
-            <h1 style='margin:0;'>Proyección Eventos TCAS (Traffic Collision Avoidance System)</h1>
-            <h3 style='margin:0; color: gray;'>Para la flota ATR 42</h3>
-        </div>
-        <div style='flex:1; display: flex; justify-content: center;'>
-            <img src='logo_satena.png' width='120'>
-        </div>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+# Título y subtítulo
+with col_titulo:
+    st.markdown("<h1 style='text-align: center; margin-bottom: 0;'>Proyección Eventos TCAS</h1>", unsafe_allow_html=True)
+    st.markdown("<h3 style='text-align: center; color: gray; margin-top: 0;'>Para la flota ATR 42</h3>", unsafe_allow_html=True)
+
+# Logo derecho
+with col_logo2:
+    st.write("")  # espaciador para centrar verticalmente
+    st.image("assets/logo_satena.png", width=120)
 # -----------------------
 # INPUTS
 # -----------------------
