@@ -18,7 +18,7 @@ with col_logo1:
     st.image("logo_esave.png", width=80)  # Logo izquierdo
 
 with col_titulo:
-    st.markdown("<h1 style='text-align: center;'>Proyección TCAS</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: center;'>Proyección Eventos TCAS (Traffic Collision Avoidance System)</h1>", unsafe_allow_html=True)
     st.markdown("<h3 style='text-align: center; color: gray;'>Para la flota ATR 42</h3>", unsafe_allow_html=True)
 
 with col_logo2:
