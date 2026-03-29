@@ -438,7 +438,7 @@ if st.button("Enviar"):
     ---
     ### 🧾 Conclusión
 
-    Se proyecta que en el año **{año_proyectado}** se tenga un incremento del **{incremento}%** en los eventos TCAS con respecto al último año con datos (**{ultimo_año_real}**), alcanzando un total estimado de **{eventos_proyectados} eventos TCAS** en la flota ATR.
+    Se proyecta que en el año **{año_proyectado}** se tenga un incremento de eventos TCAS a **{eventos_proyectados}** en el año, mientras que en el año **{ultimo_año_real}**, en base a datos históricos, se tiene una cantidad de **{eventos_ultimo_año} eventos TCAS RA** en la flota ATR.
 
     Por otro lado, se evidencia que las fases con mayor cantidad de eventos TCAS RA históricamente son **{fase1}** y **{fase2}**.
 
