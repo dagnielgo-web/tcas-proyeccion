@@ -22,7 +22,7 @@ with col_titulo:
     st.markdown("<h3 style='text-align: center; color: gray;'>Para la flota ATR 42</h3>", unsafe_allow_html=True)
 
 with col_logo2:
-    st.image("logo_satena.png", width=90)  # Logo derecho
+    st.image("logo_satena.png", width=80)  # Logo derecho
 # -----------------------
 # INPUTS
 # -----------------------
