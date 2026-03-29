@@ -15,14 +15,14 @@ import matplotlib.pyplot as plt
 col_logo1, col_titulo, col_logo2 = st.columns([1, 4, 1])
 
 with col_logo1:
-    st.image("tcas-proyeccion/logo_esave.png", width=80)  # Logo izquierdo
+    st.image("tcas-proyeccion / logo_esave.png", width=80)  # Logo izquierdo
 
 with col_titulo:
     st.markdown("<h1 style='text-align: center;'>Proyección TCAS</h1>", unsafe_allow_html=True)
     st.markdown("<h3 style='text-align: center; color: gray;'>Para la flota ATR 42</h3>", unsafe_allow_html=True)
 
 with col_logo2:
-    st.image("tcas-proyeccion/logo_satena.png", width=80)  # Logo derecho
+    st.image("tcas-proyeccion / logo_satena.png", width=80)  # Logo derecho
 # -----------------------
 # INPUTS
 # -----------------------
