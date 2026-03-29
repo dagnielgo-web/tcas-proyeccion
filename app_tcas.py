@@ -217,6 +217,59 @@ if st.button("Enviar"):
 
     st.subheader("Mapa actual")
     st.components.v1.html(mapa._repr_html_(), height=600)
+    
+     # -----------------------
+    # 📊 GRÁFICAS
+    # -----------------------
+    def clasificar_altitud(alt):
+        if alt < 10000:
+            return "LOW (<10000 ft)"
+        elif alt < 20000:
+            return "MEDIUM (10000-20000 ft)"
+        elif alt < 30000:
+            return "HIGH (20000-30000 ft)"
+        else:
+            return "CRUISE (>30000 ft)"
+
+    df_eventos["nivel_altitud"] = df_eventos["altitud"].apply(clasificar_altitud)
+
+    riesgo_altitud = df_eventos["nivel_altitud"].value_counts()
+
+    st.subheader("Riesgo TCAS por Altitud General")
+    fig1, ax1 = plt.subplots()
+    riesgo_altitud.plot(kind="bar", ax=ax1, title="Riesgo TCAS por Altitud")
+    st.pyplot(fig1)
+
+    riesgo_fase = df_eventos["fase"].value_counts()
+
+    st.subheader("Eventos TCAS por Fase de Vuelo General")
+    fig2, ax2 = plt.subplots()
+    riesgo_fase.plot(kind="bar", ax=ax2, title="Eventos TCAS por fase de vuelo")
+    st.pyplot(fig2)
+        # -----------------------
+    # 🕒 EVENTOS POR HORA
+    # -----------------------
+    def clasificar_hora(h):
+        if 0 <= h < 6:
+            return "MADRUGADA (00-06)"
+        elif 6 <= h < 12:
+            return "MAÑANA (06-12)"
+        elif 12 <= h < 18:
+            return "TARDE (12-18)"
+        else:
+            return "NOCHE (18-24)"
+
+    df_eventos["rango_hora"] = df_eventos["hora"].apply(clasificar_hora)
+
+    eventos_por_hora = df_eventos["rango_hora"].value_counts().sort_index()
+
+    st.subheader("Eventos TCAS por Rango Horario Colombiano")
+    fig3, ax3 = plt.subplots()
+    eventos_por_hora.plot(kind="bar", ax=ax3, title="Distribución de eventos por hora del día")
+    st.pyplot(fig3)
+
+
+
 
     # -----------------------
     # 📈 PROYECCIÓN
@@ -270,6 +323,11 @@ if st.button("Enviar"):
 
 # Redondeo general (menos preciso que tasas)
     df_proyeccion = df_proyeccion.round(2)
+
+    #titulo de medio proyeccion
+    año_proyectado_usuario = int(df_proyeccion.iloc[-1]["año"])
+
+    st.markdown(f"<h3 style='text-align: center;'>Proyección para el año {año_proyectado_usuario}</h3>", unsafe_allow_html=True)
 
     st.subheader("Proyección")
     st.dataframe(df_proyeccion)
@@ -342,59 +400,52 @@ if st.button("Enviar"):
 
     st.subheader("Mapa proyectado")
     st.components.v1.html(mapa_futuro._repr_html_(), height=600)
-
+    
     # -----------------------
-    # 📊 GRÁFICAS
-    # -----------------------
-    def clasificar_altitud(alt):
-        if alt < 10000:
-            return "LOW (<10000 ft)"
-        elif alt < 20000:
-            return "MEDIUM (10000-20000 ft)"
-        elif alt < 30000:
-            return "HIGH (20000-30000 ft)"
-        else:
-            return "CRUISE (>30000 ft)"
+# 📝 CONCLUSIÓN AUTOMÁTICA
+# -----------------------
 
-    df_eventos["nivel_altitud"] = df_eventos["altitud"].apply(clasificar_altitud)
+# Último año con datos reales
+    ultimo_año_real = df_eventos["año"].max()
+    eventos_ultimo_año = len(df_eventos[df_eventos["año"] == ultimo_año_real])
 
-    riesgo_altitud = df_eventos["nivel_altitud"].value_counts()
+# Año proyectado
+    año_proyectado = int(df_proyeccion.iloc[-1]["año"])
+    eventos_proyectados = int(df_proyeccion.iloc[-1]["eventos_tcas_estimados"])
 
-    st.subheader("Riesgo TCAS por Altitud General")
-    fig1, ax1 = plt.subplots()
-    riesgo_altitud.plot(kind="bar", ax=ax1, title="Riesgo TCAS por Altitud")
-    st.pyplot(fig1)
+# Incremento %
+    if eventos_ultimo_año > 0:
+        incremento = ((eventos_proyectados - eventos_ultimo_año) / eventos_ultimo_año) * 100
+    else:
+        incremento = 0
 
-    riesgo_fase = df_eventos["fase"].value_counts()
+    incremento = round(incremento, 2)
 
-    st.subheader("Eventos TCAS por Fase de Vuelo General")
-    fig2, ax2 = plt.subplots()
-    riesgo_fase.plot(kind="bar", ax=ax2, title="Eventos TCAS por fase de vuelo")
-    st.pyplot(fig2)
-        # -----------------------
-    # 🕒 EVENTOS POR HORA
-    # -----------------------
-    def clasificar_hora(h):
-        if 0 <= h < 6:
-            return "MADRUGADA (00-06)"
-        elif 6 <= h < 12:
-            return "MAÑANA (06-12)"
-        elif 12 <= h < 18:
-            return "TARDE (12-18)"
-        else:
-            return "NOCHE (18-24)"
+# Fases más frecuentes
+    top_fases = df_eventos["fase"].value_counts().head(2).index.tolist()
 
-    df_eventos["rango_hora"] = df_eventos["hora"].apply(clasificar_hora)
+    fase1 = top_fases[0] if len(top_fases) > 0 else "N/A"
+    fase2 = top_fases[1] if len(top_fases) > 1 else "N/A"
 
-    eventos_por_hora = df_eventos["rango_hora"].value_counts().sort_index()
+# Hora más frecuente
+    top_hora = df_eventos["rango_hora"].value_counts().idxmax()
 
-    st.subheader("Eventos TCAS por Rango Horario Colombiano")
-    fig3, ax3 = plt.subplots()
-    eventos_por_hora.plot(kind="bar", ax=ax3, title="Distribución de eventos por hora del día")
-    st.pyplot(fig3)
+# Altitud más frecuente
+    top_altitud = df_eventos["nivel_altitud"].value_counts().idxmax()
 
+# Texto final
+    st.markdown(f"""
+    ---
+    ### 🧾 Conclusión
 
+    Se proyecta que en el año **{año_proyectado}** se tenga un incremento del **{incremento}%** en los eventos TCAS con respecto al último año con datos (**{ultimo_año_real}**), alcanzando un total estimado de **{eventos_proyectados} eventos TCAS** en la flota ATR.
 
+    Por otro lado, se evidencia que las fases con mayor cantidad de eventos TCAS RA históricamente son **{fase1}** y **{fase2}**.
+
+    Adicionalmente, se observa una mayor frecuencia horaria de eventos en el rango **{top_hora}**, mientras que el rango de altitud con mayor ocurrencia corresponde a **{top_altitud}**.
+    """)
+
+   
 # -----------------------
 # ✍️ FIRMA
 # -----------------------
