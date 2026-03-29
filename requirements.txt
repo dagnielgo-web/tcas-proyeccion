@@ -4,4 +4,4 @@ numpy
 folium
 scikit-learn
 matplotlib
-pip install plotly
+plotly
