@@ -238,15 +238,19 @@ if st.button("Enviar"):
     st.subheader("Riesgo TCAS por Altitud General")
     import plotly.express as px
 
+# Crear DataFrame seguro para Plotly
+    df_alt = df_eventos["nivel_altitud"].value_counts().reset_index()
+    df_alt.columns = ["Nivel de Altitud", "Cantidad de Eventos"]
+
     fig_altitud = px.bar(
-        df_eventos["nivel_altitud"].value_counts().reset_index(),
-        x="index",
-        y="nivel_altitud",
-        labels={"index": "Nivel de Altitud", "nivel_altitud": "Cantidad de Eventos"},
+        df_alt,
+        x="Nivel de Altitud",
+        y="Cantidad de Eventos",
+        color="Cantidad de Eventos",
         title="Riesgo TCAS por Altitud",
-        color="nivel_altitud",
-        color_discrete_sequence=px.colors.qualitative.Bold
+        color_continuous_scale=px.colors.sequential.Viridis
     )
+
     st.plotly_chart(fig_altitud, use_container_width=True)
 
     riesgo_fase = df_eventos["fase"].value_counts()
