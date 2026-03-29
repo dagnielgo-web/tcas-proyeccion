@@ -169,8 +169,8 @@ if st.button("Enviar"):
 # Más decimales solo en esta tabla
     df_tasas["Tasa"] = df_tasas["Tasa"].round(4)
 
-    st.write("Tasas TCAS por año")
-    st.dataframe(df_tasas)
+  #  st.write("Tasas TCAS por año")
+# st.dataframe(df_tasas)
 
     # -----------------------
     # 🗺️ MAPA ACTUAL
