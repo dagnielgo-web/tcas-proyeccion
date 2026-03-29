@@ -273,6 +273,25 @@ if st.button("Enviar"):
 
     st.subheader("Proyección")
     st.dataframe(df_proyeccion)
+    # -----------------------
+# 📊 UNIR TASAS HISTÓRICAS + PROYECTADAS
+# -----------------------
+
+# Tomar tasas proyectadas
+    df_tasas_proy = df_proyeccion[["año","tasa_tcas_por_1000_vuelos"]].copy()
+    df_tasas_proy.columns = ["Año","Tasa"]
+
+# Unir con tasas históricas
+    df_tasas_total = pd.concat([df_tasas, df_tasas_proy], ignore_index=True)
+
+# Ordenar por año
+    df_tasas_total = df_tasas_total.sort_values("Año")
+
+# Mantener formato con más decimales
+    df_tasas_total["Tasa"] = df_tasas_total["Tasa"].round(4)
+
+    st.subheader("Tasas TCAS por año (Histórico + Proyección)")
+    st.dataframe(df_tasas_total)
 
     # -----------------------
     # 🗺️ MAPA FUTURO
