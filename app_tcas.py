@@ -33,8 +33,27 @@ with col_titulo:
 # Logo derecho
 with col_logo2:
     st.markdown("<div style='height: 100%; display: flex; align-items: center; justify-content: center;'>", unsafe_allow_html=True)
-    st.image("logo_satena.png", width=80)
+    st.image("logo_satena.png", width=120)
     st.markdown("</div>", unsafe_allow_html=True)
+
+# Div principal con display flex
+st.markdown(
+    """
+    <div style='display: flex; align-items: center; justify-content: center;'>
+        <div style='flex:1; display: flex; justify-content: center;'>
+            <img src='logo_esave.png' width='80'>
+        </div>
+        <div style='flex:4; text-align: center;'>
+            <h1 style='margin:0;'>Proyección Eventos TCAS (Traffic Collision Avoidance System)</h1>
+            <h3 style='margin:0; color: gray;'>Para la flota ATR 42</h3>
+        </div>
+        <div style='flex:1; display: flex; justify-content: center;'>
+            <img src='logo_satena.png' width='80'>
+        </div>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 # -----------------------
 # INPUTS
 # -----------------------
