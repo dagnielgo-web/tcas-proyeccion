@@ -5,3 +5,4 @@ folium
 scikit-learn
 matplotlib
 plotly
+statsmodels
