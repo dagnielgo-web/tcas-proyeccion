@@ -29,6 +29,21 @@ with col_logo2:
 
     st.markdown("<br><br>", unsafe_allow_html=True)# espaciador para centrar verticalmente
     st.image("logo_satena.png", width=120)
+
+
+#introduccion 
+
+st.markdown(
+    """
+    <div style='text-align: center; font-size: 16px; margin-top: 10px; margin-bottom: 30px;'>
+    Esta herramienta permite analizar la ocurrencia de eventos TCAS RA en la flota ATR 42, 
+    identificando patrones históricos, distribución espacial y comportamiento operativo. 
+    Adicionalmente, se realiza una proyección de eventos basada en tendencias y crecimiento operacional esperado.
+    Es necesario subir archivo extraido de SARA, posterior colocar los rangos historicos que se suben en la carpeta y luego los años a proyectar
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 # -----------------------
 # INPUTS
 # -----------------------
@@ -218,7 +233,7 @@ if st.button("Enviar"):
         folium.CircleMarker(
             location=[row["lat"], row["lon"]],
             radius=3,
-            color="yellow",
+            color="black",
             fill=True,
             fill_opacity=0.3,
             popup=folium.Popup(info, max_width=300)
@@ -398,6 +413,29 @@ if st.button("Enviar"):
 
     st.subheader("Tasas TCAS por año (Histórico + Proyección)")
     st.dataframe(df_tasas_total)
+
+
+    import plotly.express as px
+
+# Gráfica de dispersión con tendencia
+    fig_tasas = px.scatter(
+        df_tasas_total,
+        x="Año",
+        y="Tasa",
+        title="Tendencia de la Tasa TCAS por Año",
+        trendline="ols",  # línea de regresión automática
+        color="Tasa",
+        color_continuous_scale=px.colors.sequential.Viridis
+    )
+
+    fig_tasas.update_traces(marker=dict(size=10))
+
+    fig_tasas.update_layout(
+        xaxis_title="Año",
+        yaxis_title="Tasa por 1000 vuelos",
+    )
+
+    st.plotly_chart(fig_tasas, use_container_width=True)
 
     # -----------------------
     #  MAPA FUTURO
