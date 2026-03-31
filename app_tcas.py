@@ -462,12 +462,7 @@ if st.button("Enviar"):
     eventos_proyectados = int(df_proyeccion.iloc[-1]["eventos_tcas_estimados"])
 
 # Incremento %
-    if eventos_ultimo_año > 0:
-        incremento = ((eventos_proyectados - eventos_ultimo_año) / eventos_ultimo_año) * 100
-    else:
-        incremento = 0
 
-    incremento = round(incremento, 2)
 
 # Fases más frecuentes
     top_fases = df_eventos["fase"].value_counts().head(2).index.tolist()
