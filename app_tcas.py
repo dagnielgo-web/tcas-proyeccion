@@ -22,7 +22,7 @@ with col_logo1:
 
 # Título y subtítulo
 with col_titulo:
-    st.markdown("<h1 style='text-align: center; margin-bottom: 0;'>Proyección Eventos TCAS (Traffic Collision Avoidance System)</h1>", unsafe_allow_html=True)
+    st.markdown("<h2 style='text-align: center; margin-bottom: 0;'>Análisis Y Evaluación Predictiva De Eventos TCAS-RA (Traffic Collision Avoidance System - Resolution Advisory)</h1>", unsafe_allow_html=True)
     st.markdown("<h3 style='text-align: center; color: gray; margin-top: 0;'>Para la flota ATR 42</h3>", unsafe_allow_html=True)
 
 # Logo derecho
@@ -107,7 +107,7 @@ if st.button("Enviar"):
             if not filas_evento.empty:
 
                 #  Fases a excluir
-                fases_excluidas = ["PARKING", "FINAL APPROACH", "TAXI_OUT"]
+                fases_excluidas = ["PARKING", "FIN_APPROACH", "TAXI_OUT", "TAXI_IN", "GO_AROUND"]
 
                 filas_validas = filas_evento[
                     ~filas_evento["FLIGHT__PHASE"].astype(str).str.upper().isin(fases_excluidas)
