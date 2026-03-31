@@ -20,10 +20,9 @@ with col_logo1:
     st.markdown("<br><br>", unsafe_allow_html=True)# espaciador para centrar verticalmente
     st.image("logo_esave.png", width=80)
 
-# Título y subtítulo
+# Título
 with col_titulo:
     st.markdown("<h3 style='text-align: center; margin-bottom: 0;'>Análisis Y Evaluación Predictiva De Eventos TCAS-RA (Traffic Collision Avoidance System - Resolution Advisory)</h1>", unsafe_allow_html=True)
-    st.markdown("<h3 style='text-align: center; color: gray; margin-top: 0;'>Para la flota ATR 42</h3>", unsafe_allow_html=True)
 
 # Logo derecho
 with col_logo2:
