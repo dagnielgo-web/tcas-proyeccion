@@ -48,7 +48,7 @@ st.markdown(
 # INPUTS
 # -----------------------
 
-st.markdown("<br><br>", unsafe_allow_html=True)
+
 zip_file = st.file_uploader("Sube la carpeta comprimida (.zip)", type=["zip"])
 
 col1, col2 = st.columns(2)
