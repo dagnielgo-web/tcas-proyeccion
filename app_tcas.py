@@ -218,7 +218,7 @@ if st.button("Enviar"):
         folium.CircleMarker(
             location=[row["lat"], row["lon"]],
             radius=3,
-            color="red",
+            color="yellow",
             fill=True,
             fill_opacity=0.3,
             popup=folium.Popup(info, max_width=300)
@@ -431,7 +431,7 @@ if st.button("Enviar"):
             location=[row["lat_bin"], row["lon_bin"]],
             radius=5 + row["eventos"] * 0.15,
             popup=f"Eventos estimados: {int(row['eventos'])}",
-            color="blue",
+            color="red",
             fill=True,
             fill_opacity=0.6
         ).add_to(mapa_futuro)
