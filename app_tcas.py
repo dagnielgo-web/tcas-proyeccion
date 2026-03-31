@@ -39,7 +39,7 @@ st.markdown(
     Esta herramienta permite analizar la ocurrencia de eventos TCAS RA en la flota ATR 42, 
     identificando patrones históricos, distribución espacial y comportamiento operativo. 
     Adicionalmente, se realiza una proyección de eventos basada en tendencias y crecimiento operacional esperado.
-    Es necesario subir archivo extraido de SARA, posterior colocar los rangos historicos que se suben en la carpeta y luego los años a proyectar
+    Es necesario subir archivo extraido de SARA, posterior colocar los rangos historicos que se suben en la carpeta, agregar el porcentaje de crecimiento operacional esperado y luego los años a proyectar
     </div>
     """,
     unsafe_allow_html=True
