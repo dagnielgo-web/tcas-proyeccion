@@ -288,13 +288,17 @@ if st.button("Enviar"):
     # -----------------------
     def clasificar_hora(h):
         if 0 <= h < 6:
-            return "MADRUGADA (00-06)"
-        elif 6 <= h < 12:
-            return "MAÑANA (06-12)"
-        elif 12 <= h < 18:
-            return "TARDE (12-18)"
+            return "(00-06)"
+        elif 6 <= h < 9:
+            return "(06-09)"
+        elif 9 <= h < 12:
+            return "(09-12)"
+        elif 12 <= h < 15:
+            return "(12-15)"
+        elif 15 <= h < 18:
+            return "(15-18)"
         else:
-            return "NOCHE (18-24)"
+            return "(18-24)"
 
     df_eventos["rango_hora"] = df_eventos["hora"].apply(clasificar_hora)
 
