@@ -32,6 +32,7 @@ with col_logo2:
 # -----------------------
 # INPUTS
 # -----------------------
+st.write("")
 zip_file = st.file_uploader("Sube la carpeta comprimida (.zip)", type=["zip"])
 
 col1, col2 = st.columns(2)
