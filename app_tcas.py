@@ -22,7 +22,7 @@ with col_logo1:
     
 # Título
 with col_titulo:
-    st.markdown("<h2 style='text-align: center; margin-bottom: 0;'>Análisis Y Evaluación Predictiva De Eventos TCAS-RA</h1>", unsafe_allow_html=True)
+    st.markdown("<h3 style='text-align: center; margin-bottom: 0;'>Análisis Y Evaluación Predictiva De Eventos TCAS-RA</h1>", unsafe_allow_html=True)
 
 # Logo derecho
 with col_logo2:
