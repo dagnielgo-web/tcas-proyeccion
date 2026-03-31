@@ -16,7 +16,7 @@ col_logo1, col_titulo, col_logo2 = st.columns([1, 4, 1])
 
 # Logo izquierdo
 with col_logo1:
-    st.write("")
+
     st.markdown("<br><br>", unsafe_allow_html=True)# espaciador para centrar verticalmente
     st.image("logo_esave.png", width=80)
 
@@ -26,7 +26,7 @@ with col_titulo:
 
 # Logo derecho
 with col_logo2:
-    st.write("")
+
     st.markdown("<br><br>", unsafe_allow_html=True)# espaciador para centrar verticalmente
     st.image("logo_satena.png", width=120)
 # -----------------------
