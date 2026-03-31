@@ -22,7 +22,7 @@ with col_logo1:
 
 # Título y subtítulo
 with col_titulo:
-    st.markdown("<h2 style='text-align: center; margin-bottom: 0;'>Análisis Y Evaluación Predictiva De Eventos TCAS-RA (Traffic Collision Avoidance System - Resolution Advisory)</h1>", unsafe_allow_html=True)
+    st.markdown("<h3 style='text-align: center; margin-bottom: 0;'>Análisis Y Evaluación Predictiva De Eventos TCAS-RA (Traffic Collision Avoidance System - Resolution Advisory)</h1>", unsafe_allow_html=True)
     st.markdown("<h3 style='text-align: center; color: gray; margin-top: 0;'>Para la flota ATR 42</h3>", unsafe_allow_html=True)
 
 # Logo derecho
