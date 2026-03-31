@@ -32,7 +32,7 @@ with col_logo2:
 # -----------------------
 # INPUTS
 # -----------------------
-st.markdown("<br><br>", unsafe_allow_html=True)
+
 st.markdown("<br><br>", unsafe_allow_html=True)
 zip_file = st.file_uploader("Sube la carpeta comprimida (.zip)", type=["zip"])
 
