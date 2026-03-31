@@ -18,17 +18,18 @@ col_logo1, col_titulo, col_logo2 = st.columns([1, 4, 1])
 with col_logo1:
 
     st.markdown("<br><br>", unsafe_allow_html=True)# espaciador para centrar verticalmente
-    st.image("logo_esave.png", width=80)
-
+    st.image("logo_satena.png", width=120)
+    
 # Título
 with col_titulo:
     st.markdown("<h2 style='text-align: center; margin-bottom: 0;'>Análisis Y Evaluación Predictiva De Eventos TCAS-RA</h1>", unsafe_allow_html=True)
 
 # Logo derecho
 with col_logo2:
-
+    
+    st.image("logo_esave.png", width=80)
     st.markdown("<br><br>", unsafe_allow_html=True)# espaciador para centrar verticalmente
-    st.image("logo_satena.png", width=120)
+
 
 
 #introduccion 
