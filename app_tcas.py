@@ -159,8 +159,10 @@ if st.button("Enviar"):
     if df_eventos.empty:
         st.error("No hay datos en ese rango")
         st.stop()
-
-    st.subheader("Eventos detectados")
+    
+    st.subheader("Eventos TCAS RA Historicós")
+    
+    st.write("Eventos detectados")
     st.write(len(df_eventos))
 
     # -----------------------
@@ -233,7 +235,7 @@ if st.button("Enviar"):
         folium.CircleMarker(
             location=[row["lat"], row["lon"]],
             radius=3,
-            color="black",
+            color="red",
             fill=True,
             fill_opacity=0.3,
             popup=folium.Popup(info, max_width=300)
@@ -267,7 +269,7 @@ if st.button("Enviar"):
 
     riesgo_altitud = df_eventos["nivel_altitud"].value_counts()
 
-    st.subheader("Eventos TCAS por Diferentes Parámetros Historicós")
+
     import plotly.express as px
 
 # Crear DataFrame seguro para Plotly
