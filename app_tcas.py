@@ -388,7 +388,7 @@ if st.button("Enviar"):
     df_proyeccion["tasa_tcas_por_1000_vuelos"] = np.round(tasas_proyectadas, 4)
 
 # Redondeo general (menos preciso que tasas)
-    df_proyeccion = df_proyeccion.round(0)
+    df_proyeccion = df_proyeccion.round(1)
 
     #titulo de medio proyeccion
     año_proyectado_usuario = int(df_proyeccion.iloc[-1]["año"])
