@@ -308,86 +308,19 @@ if st.button("Enviar"):
         # -----------------------
     #  EVENTOS POR HORA
     # -----------------------
-  #  def clasificar_hora(h):
-   #     if 0 <= h < 6:
-    #        return "(00-06)"
-    #    elif 6 <= h < 9:
-     #       return "(06-09)"
-      #  elif 9 <= h < 12:
-       #     return "(09-12)"
-        #elif 12 <= h < 15:
-         #   return "(12-15)"
-       # elif 15 <= h < 18:
-        #    return "(15-18)"
-        #else:
-         #   return "(18-24)"
-
-   # df_eventos["rango_hora"] = df_eventos["hora"].apply(clasificar_hora)
-
-    #df_hora = df_eventos["rango_hora"].value_counts().sort_index().reset_index()
-    #df_hora.columns = ["Rango Horario", "Cantidad de Eventos"]
-
-   # fig_hora = px.bar(
-    #    df_hora,
-     #   x="Rango Horario",
-      #  y="Cantidad de Eventos",
-       # color="Cantidad de Eventos",
-        #title="Distribución de eventos por hora del día",
-       # color_continuous_scale=px.colors.sequential.Viridis
-    #)
-
-    #st.plotly_chart(fig_hora, use_container_width=True)
-
-    # -----------------------
-    #  EVENTOS POR HORA A HORA
-    # -----------------------
     def clasificar_hora(h):
-        if 0 <= h < 1:
+        if 0 <= h < 6:
             return "(00-06)"
-        elif 1 <= h < 2:
+        elif 6 <= h < 9:
             return "(06-09)"
-        elif 2 <= h < 3:
+        elif 9 <= h < 12:
             return "(09-12)"
-        elif 3 <= h < 4:
+        elif 12 <= h < 15:
             return "(12-15)"
-        elif 4 <= h < 5:
+        elif 15 <= h < 18:
             return "(15-18)"
-        elif 5 <= h < 6:
-            return "(00-06)"
-        elif 6 <= h < 7:
-            return "(06-09)"
-        elif 7 <= h < 8:
-            return "(09-12)"
-        elif 8 <= h < 9:
-            return "(12-15)"
-        elif 9 <= h < 10:
-            return "(15-18)"
-        elif 10 <= h < 11:
-            return "(00-06)"
-        elif 11 <= h < 12:
-            return "(06-09)"
-        elif 12 <= h < 13:
-            return "(09-12)"
-        elif 13 <= h < 14:
-            return "(12-15)"
-        elif 14 <= h < 15:
-            return "(15-18)"
-        elif 15 <= h < 16:
-            return "(00-06)"
-        elif 16 <= h < 17:
-            return "(06-09)"
-        elif 17 <= h < 18:
-            return "(09-12)"
-        elif 18 <= h < 19:
-            return "(12-15)"
-        elif 19 <= h < 20:
-            return "(15-18)"
-            elif 20 <= h < 21:
-            return "(00-06)"
-        elif 21 <= h < 22:
-            return "(06-09)"
         else:
-            return "(22-23)"
+            return "(18-24)"
 
     df_eventos["rango_hora"] = df_eventos["hora"].apply(clasificar_hora)
 
@@ -405,7 +338,7 @@ if st.button("Enviar"):
 
     st.plotly_chart(fig_hora, use_container_width=True)
 
-
+  
     # -----------------------
     #  PROYECCIÓN
     # -----------------------
