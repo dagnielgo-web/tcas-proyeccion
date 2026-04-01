@@ -257,14 +257,18 @@ if st.button("Enviar"):
     #  GRÁFICAS
     # -----------------------
     def clasificar_altitud(alt):
+        if alt < 5000:
+            return "(<5000 ft)"
         if alt < 10000:
-            return "LOW (<10000 ft)"
+            return "(5000-10000 ft)"
+        elif alt < 15000:
+            return "(10000-15000 ft)"
         elif alt < 20000:
-            return "MEDIUM (10000-20000 ft)"
+            return "(15000-20000 ft)"
         elif alt < 30000:
-            return "HIGH (20000-30000 ft)"
+            return "(20000-30000 ft)"
         else:
-            return "CRUISE (>30000 ft)"
+            return "(>30000 ft)"
 
     df_eventos["nivel_altitud"] = df_eventos["altitud"].apply(clasificar_altitud)
 
