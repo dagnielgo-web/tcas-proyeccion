@@ -161,7 +161,10 @@ if st.button("Enviar"):
         st.error("No hay datos en ese rango")
         st.stop()
     
-    st.subheader("Eventos TCAS RA Historicós")
+    st.markdown(
+        "<h3 style='text-align: center; margin-top: 20px;'>Eventos TCAS RA Históricos</h3>",
+        unsafe_allow_html=True
+    )
     
     st.write("Eventos detectados")
     st.write(len(df_eventos))
