@@ -36,7 +36,7 @@ with col_logo2:
 
 st.markdown(
     """
-    <div style='text-align: center; font-size: 16px; margin-top: 10px; margin-bottom: 30px;'>
+    <div style='text-align: justify; font-size: 16px; margin-top: 10px; margin-bottom: 30px;'>
     Esta herramienta permite analizar la ocurrencia de eventos TCAS RA (Traffic Collision Avoidance System - Resolution Advisory) en la flota ATR 42, 
     identificando patrones históricos, distribución espacial y comportamiento operativo. 
     Adicionalmente, se realiza una proyección de eventos basada en tendencias y crecimiento operacional esperado.
@@ -338,7 +338,28 @@ if st.button("Enviar"):
 
     st.plotly_chart(fig_hora, use_container_width=True)
 
-  
+# -----------------------
+#  EVENTOS POR HORA EXACTA
+# -----------------------
+
+    df_hora_exacta = df_eventos["hora"].value_counts().sort_index().reset_index()
+    df_hora_exacta.columns = ["Hora", "Cantidad de Eventos"]
+
+    fig_hora_exacta = px.bar(
+        df_hora_exacta,
+        x="Hora",
+        y="Cantidad de Eventos",
+        color="Cantidad de Eventos",
+        title="Eventos TCAS por Hora del Día",
+        color_continuous_scale=px.colors.sequential.Viridis
+    )
+
+    fig_hora_exacta.update_layout(
+        xaxis_title="Hora del día (0-23)",
+        yaxis_title="Cantidad de eventos"
+    )
+
+    st.plotly_chart(fig_hora_exacta, use_container_width=True)  
     # -----------------------
     #  PROYECCIÓN
     # -----------------------
@@ -389,8 +410,11 @@ if st.button("Enviar"):
 
     df_proyeccion["tasa_tcas_por_1000_vuelos"] = np.round(tasas_proyectadas, 4)
 
-# Redondeo general (menos preciso que tasas)
+# Redondeo general
     df_proyeccion = df_proyeccion.round(2)
+
+# 🔹 SOLO eventos proyectados sin decimales
+    df_proyeccion["eventos_tcas_estimados"] = df_proyeccion["eventos_tcas_estimados"].round(0).astype(int)
 
     #titulo de medio proyeccion
     año_proyectado_usuario = int(df_proyeccion.iloc[-1]["año"])
