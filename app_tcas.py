@@ -563,6 +563,6 @@ if st.button("Enviar"):
 # ✍️ FIRMA
 # -----------------------
 st.markdown(
-    "<p style='text-align: right; font-size: 12px;'>Diseñado por Daniel Gonzalez</p>",
+    "<p style='text-align: right; font-size: 12px;'>Diseñado por Daniel E. Gonzalez Murillo</p>",
     unsafe_allow_html=True
 )
