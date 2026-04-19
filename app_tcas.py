@@ -364,74 +364,84 @@ if st.button("Enviar"):
 
     st.plotly_chart(fig_hora_exacta, use_container_width=True)  
     # -----------------------
-    #  PROYECCIÓN
+    #  PROYECCIÓN HÍBRIDA (TEMPORAL)
     # -----------------------
+
     tasa_media = np.mean(list(tasas.values())) * 1000
     crecimiento_operacional = crecimiento_operacional / 100
 
     ultimo_año_vuelos = max(vuelos_por_año)
     vuelos_actuales = vuelos_por_año[ultimo_año_vuelos]
 
-    proyeccion = []
-
-    for i in range(1, int(años_proyeccion)+1):
-        año = ultimo_año_vuelos + i
-        vuelos = vuelos_actuales * (1+crecimiento_operacional)**i
-        eventos_estimados = (tasa_media / 1000) * vuelos
-        proyeccion.append([año,vuelos,eventos_estimados])
-
-    df_proyeccion = pd.DataFrame(
-        proyeccion,
-        columns=["año","vuelos_proyectados","eventos_tcas_estimados"]
-    )
-
-# -----------------------
-#  TASA PROYECTADA LINEAL
+    # -----------------------
+# REGRESIÓN LINEAL
 # -----------------------
     años_hist = np.array(df_tasas["Año"].values)
     tasas_hist = np.array(df_tasas["Tasa"].values)
 
-# -----------------------
-#  REGRESIÓN LINEAL
-# -----------------------
     if len(años_hist) >= 2:
         pendiente, intercepto = np.polyfit(años_hist, tasas_hist, 1)
+        correlacion = np.corrcoef(años_hist, tasas_hist)[0,1]
+        r2 = correlacion**2
     else:
         pendiente = 0
         intercepto = tasas_hist[0] if len(tasas_hist) > 0 else 0
+        r2 = 0
 
-    tasas_proyectadas = []
+# Mostrar R²
+    st.write(f"Coeficiente de determinación R²: {round(r2,4)}")
 
-    for año in df_proyeccion["año"]:
-        tasa = pendiente * año + intercepto
+# -----------------------
+# PESO DINÁMICO (CLAVE)
+# -----------------------
+# mientras más bajo el R² → menos peso a la regresión
+    alpha = max(0.2, min(0.7, r2))
 
-    #  evitar tasas negativas
-        if tasa < 0:
-            tasa = 0
+    st.write(f"Peso del modelo híbrido (α): {round(alpha,3)}")
 
-        tasas_proyectadas.append(tasa)
+    proyeccion = []
 
-    df_proyeccion["tasa_tcas_por_1000_vuelos"] = np.round(tasas_proyectadas, 4)
+    for i in range(1, int(años_proyeccion)+1):
+        año = ultimo_año_vuelos + i
+    
+    # vuelos proyectados
+        vuelos = vuelos_actuales * (1 + crecimiento_operacional) ** i
+    
+    # tasa por regresión
+        tasa_reg = pendiente * año + intercepto
+        if tasa_reg < 0:
+            tasa_reg = 0
+    
+    # tasa híbrida
+        tasa_final = alpha * tasa_reg + (1 - alpha) * tasa_media
+    
+    # eventos estimados
+        eventos_estimados = (tasa_final / 1000) * vuelos
 
-# Redondeo general
+        proyeccion.append([año, vuelos, eventos_estimados, tasa_final, tasa_reg])
+
+    df_proyeccion = pd.DataFrame(
+        proyeccion,
+        columns=[
+            "año",
+            "vuelos_proyectados",
+            "eventos_tcas_estimados",
+            "tasa_hibrida",
+            "tasa_regresion"
+        ]
+    )
+
+# Redondeos
     df_proyeccion = df_proyeccion.round(2)
-
-# 🔹 SOLO eventos proyectados sin decimales
     df_proyeccion["eventos_tcas_estimados"] = df_proyeccion["eventos_tcas_estimados"].round(0).astype(int)
-
-    #titulo de medio proyeccion
-    año_proyectado_usuario = int(df_proyeccion.iloc[-1]["año"])
-
-    st.markdown(f"<h3 style='text-align: center;'>Proyección para el año {año_proyectado_usuario}</h3>", unsafe_allow_html=True)
-
-    st.subheader("Proyección")
-    st.dataframe(df_proyeccion)
+    df_proyeccion["tasa_hibrida"] = df_proyeccion["tasa_hibrida"].round(4)
+    df_proyeccion["tasa_regresion"] = df_proyeccion["tasa_regresion"].round(4)
     # -----------------------
 #  UNIR TASAS HISTÓRICAS + PROYECTADAS
 # -----------------------
 
 # Tomar tasas proyectadas
-    df_tasas_proy = df_proyeccion[["año","tasa_tcas_por_1000_vuelos"]].copy()
+    df_tasas_proy = df_proyeccion[["año","tasa_hibrida"]].copy()
     df_tasas_proy.columns = ["Año","Tasa"]
 
 # Unir con tasas históricas
